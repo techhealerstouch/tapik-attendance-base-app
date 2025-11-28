@@ -1,0 +1,200 @@
+
+/* Table of contents
+––––––––––––––––––––––––––––––––––––––––––––––––––
+
+- Rounded user avatars
+- Buttons
+- Brand Styles
+
+*/
+
+
+/* Rounded avatars
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+/* For mobile devices */
+
+/* For desktop devices */
+@media (min-width: 768px) {
+  #avatar {
+      width: 250px;
+      height: 250px;
+  }
+}
+/* Disable this if you don't want rounded avatars for users */
+.rounded-avatar {
+  margin-top: 20px;
+  border-radius: 10%;
+  -webkit-box-shadow: 0px 0px 0px 3px var(--button-background-color); 
+  box-shadow: 0px 0px 0px 3px var(--button-background-color);
+  background-color: var(--button-background-color) !important;
+  width: 250px !important;
+  height: 250px !important;
+}
+
+.social-icon {
+  font-size: 32px;
+  padding: 10px;
+}
+.social-icon-div {
+  padding-bottom: 30px;
+}
+.social-icon{color:#fff;}
+
+/* Buttons
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+:root {
+  --bgColor: #223344;
+  --bgColor2: #090a0f;
+  --accentColor: #FFF;
+  --font: 'Karla', sans-serif;
+  --delay: .3s; }
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background-color: transparent;
+  color: var(--accentColor);
+  border: solid var(--accentColor) 2px;
+  border-radius: 10px;
+  font-size: 1rem;
+  text-align: center;
+  display: block;
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-bottom: 20px;
+  padding: 10px; /* 17px */
+  text-decoration: none;
+  
+  
+  /* transition: all .25s cubic-bezier(.08, .59, .29, .99); */
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .button:hover {
+      background-color: var(--accentColor);
+      color: var(--bgColor);
+  }
+}
+
+.button:active {
+  background-color: var(--accentColor);
+  color: var(--bgColor);
+}
+
+
+/* Brand Icons
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.icon {
+  padding: 0px 8px 3.5px 0px;
+  vertical-align: middle;
+  width: 20px;
+  height: 20px;
+  -webkit-filter: grayscale(100%);
+  -moz-filter: grayscale(100%);
+  filter: grayscale(100%);
+}
+
+.button:hover .icon {
+  -webkit-filter: invert(100%) grayscale(100%);
+  -moz-filter: invert(100%) grayscale(100%);
+  filter: invert(100%) grayscale(100%);
+}
+
+.lbl-prof {
+  font-family: var(--font-family) !important;
+  color: white;
+  font-size: 12px;
+  background-position: center;
+  background-repeat: no-repeat;
+  letter-spacing: 0.1rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.lbl-subf {
+  font-family: var(--font-family) !important;
+  color: rgb(196, 196, 196);
+  font-size: 12px;
+  background-position: center;
+  background-repeat: no-repeat;
+  letter-spacing: 0.1rem;
+  line-height: 1.5;
+  font-weight: 400;
+  margin-bottom: 20px;
+}
+
+svg {
+  color: white !important;
+}
+
+.accordion {   
+}
+
+.lbl-sub {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.accordion-component {
+
+    
+}
+
+.active, .accordion:hover {
+    background-color: var(--button-background-color); /* Changed hover background color for visibility */
+}
+
+.active {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.panel {
+    display: none; /* Initially, panel is hidden */
+    background-color: var(--button-background-color);
+    overflow: hidden;
+    color: white;
+    transition: max-height 0.4s ease-in-out;
+    align-items: center;
+    margin: auto;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    align-items: center;
+    justify-content: center;
+}
+
+.space-bot {
+    padding-bottom: 15px;
+}
+.panel2 {
+    display: none; /* Initially, panel is hidden */
+    background-color: white;
+    overflow: hidden;
+    color: black;
+    width: 326px;
+    transition: max-height 0.4s ease-in-out;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+}
+
+
+.btn-details{
+  background: transparent; 
+  margin-top: 0px; 
+  margin-bottom: 16px !important;
+
+}
+
+.btns-details{
+  background: transparent; 
+  margin-top: 0px; 
+  margin-bottom: 16px !important;
+}

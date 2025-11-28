@@ -1,0 +1,179 @@
+
+/* Table of contents
+––––––––––––––––––––––––––––––––––––––––––––––––––
+
+- Rounded user avatars
+- Buttons
+- Brand Styles
+
+*/
+
+
+/* Rounded avatars
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+/* Disable this if you don't want rounded avatars for users */
+.rounded-avatar {
+  margin-top: 20px;
+  border-radius: 10%;
+  -webkit-box-shadow: 0px 0px 0px 3px var(--button-background-color); 
+  box-shadow: 0px 0px 0px 3px var(--button-background-color);
+  background-color: var(--button-background-color) !important;
+  width: var(--image-width);
+  height: var(--image-height);
+}
+
+.social-icon {
+  font-size: 32px;
+  padding: 10px;
+  color:#1f232e !important;
+}
+.social-icon-div {
+  padding-bottom: 30px;
+}
+
+/* Buttons
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 12px;
+  color: var(--button-text-color);
+  min-height: 40px;
+  line-height: 45px;
+  cursor: pointer;
+  color: var(--button-text-color);
+  background-color: var(--button-background-color);
+  width: 100%;
+  max-width: 500px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  letter-spacing: 0.1rem;
+  transition-duration: 0.3s;
+  transform: translateZ(0);
+  box-shadow: 0 0 1px rgba(3, 218, 198, 30%);
+  margin-left: 5px;
+  margin-right: 5px;
+ }
+
+
+/* Brand Icons
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.icon {
+  right: 10px;
+  bottom: 1.5px;
+  position: relative;
+  vertical-align: middle;
+  width: 20px;
+  height: 20px;
+  -webkit-filter: grayscale(100%);
+  -moz-filter: grayscale(100%);
+  filter: grayscale(100%);
+}
+
+svg {
+  color: white !important;
+}
+
+
+.lbl-prof {
+  font-family: var(--font-family) !important;
+  color: #1f232e;
+  font-size: 12px;
+  background-position: center;
+  background-repeat: no-repeat;
+  letter-spacing: 0.1rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.lbl-subf {
+  font-family: var(--font-family) !important;
+  color: rgb(141, 139, 139);
+  font-size: 12px;
+  background-position: center;
+  background-repeat: no-repeat;
+  letter-spacing: 0.1rem;
+  line-height: 1.5;
+  font-weight: 400;
+  margin-bottom: 20px;
+}
+
+svg {
+  color: white !important;
+}
+
+.accordion {
+           
+}
+
+.lbl-sub {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.accordion-component {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.active, .accordion:hover {
+    background-color: var(--button-background-color); /* Changed hover background color for visibility */
+}
+
+.active {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.panel {
+    display: none; /* Initially, panel is hidden */
+    background-color: transparent;
+    overflow: hidden;
+    color: white;
+    transition: max-height 0.4s ease-in-out;
+    align-items: center;
+    margin: auto;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 500px;
+}
+
+.icon {
+  left: 5%; /* Adjust this value as needed */
+  bottom: 33%; /* Adjust this value as needed */
+  transform: translate(0, 50%); /* Adjust this value as needed */
+  position: absolute; /* Change to absolute positioning */
+  vertical-align: middle;
+  width: 15px;
+  height: 15px;
+  -webkit-filter: grayscale(100%);
+  -moz-filter: grayscale(100%);
+  filter: grayscale(100%);
+}
+
+.btn-details{
+  background: var(--button-background-color); 
+  margin-top: 0px; 
+  margin-bottom: 16px !important;
+}
+
+.btns-details{
+  background: var(--button-background-color); 
+  margin-top: 0px; 
+  margin-bottom: 16px !important;
+}

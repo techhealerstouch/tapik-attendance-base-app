@@ -1,0 +1,332 @@
+<?php use App\Models\User; ?>
+
+@extends('layouts.sidebar')
+
+@section('content')
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
+
+    <div class="container-fluid content-inner mt-n5 py-0">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card rounded">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <section class="text-gray-400">
+                                    <h2 class="mb-4 card-header">
+                                        <i class="bi bi-person"> {{ __('messages.Manage Users') }}</i>
+                                    </h2>
+                                    <div class="card-body p-0 p-md-3">
+                                        <div id="select-active" class="d-none">
+                                            <h5 class="mb-2">{{ __('messages.Select Action') }}:</h5>
+                                            <button class="mb-3 btn btn-danger rounded-pill btn-sm">
+                                                <span class="btn-inner">
+                                                    <svg class="icon-16" width="16" viewBox="0 0 24 24" fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg">
+                                                        <path fill-rule="evenodd" clip-rule="evenodd"
+                                                            d="M20.2871 5.24297C20.6761 5.24297 21 5.56596 21 5.97696V6.35696C21 6.75795 20.6761 7.09095 20.2871 7.09095H3.71385C3.32386 7.09095 3 6.75795 3 6.35696V5.97696C3 5.56596 3.32386 5.24297 3.71385 5.24297H6.62957C7.22185 5.24297 7.7373 4.82197 7.87054 4.22798L8.02323 3.54598C8.26054 2.61699 9.0415 2 9.93527 2H14.0647C14.9488 2 15.7385 2.61699 15.967 3.49699L16.1304 4.22698C16.2627 4.82197 16.7781 5.24297 17.3714 5.24297H20.2871ZM18.8058 19.134C19.1102 16.2971 19.6432 9.55712 19.6432 9.48913C19.6626 9.28313 19.5955 9.08813 19.4623 8.93113C19.3193 8.78413 19.1384 8.69713 18.9391 8.69713H5.06852C4.86818 8.69713 4.67756 8.78413 4.54529 8.93113C4.41108 9.08813 4.34494 9.28313 4.35467 9.48913C4.35646 9.50162 4.37558 9.73903 4.40755 10.1359C4.54958 11.8992 4.94517 16.8102 5.20079 19.134C5.38168 20.846 6.50498 21.922 8.13206 21.961C9.38763 21.99 10.6811 22 12.0038 22C13.2496 22 14.5149 21.99 15.8094 21.961C17.4929 21.932 18.6152 20.875 18.8058 19.134Z"
+                                                            fill="currentColor"></path>
+                                                    </svg>
+                                                </span>
+                                                Delete
+                                            </button>
+                                        </div>
+
+                                        <div class="d-flex justify-content-end">
+                                            <button type="button" class="btn btn-primary mx-2" data-bs-toggle="modal" data-bs-target="#importUsersModal">
+                                                <i class="bi bi-cloud-upload"></i> Import Users
+                                            </button>
+                                            <button type="button" class="btn btn-primary" id="downloadUnsetUsers">
+                                                <i class="bi bi-cloud-download"></i> Export Users
+                                            </button>
+                                        </div>
+                                        <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                              <div class="modal-content">
+                                                <div class="modal-body text-center">
+                                                  <div class="spinner-border text-primary" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                  </div>
+                                                  <p id="loadingText" class="mt-3">Processing your request, please wait...</p>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        <livewire:user-table />
+
+                                        <a href="{{ url('') }}/admin/new-user">+ {{ __('messages.Add new user') }}</a>
+
+
+                                        <!-- Import Users Modal -->
+                                        <!-- Import Users Modal -->
+                                        <div class="modal fade" id="importUsersModal" tabindex="-1"
+                                            aria-labelledby="importUsersModalLabel" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="importUsersModalLabel">Import Users</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label for="userFile" class="form-label">Choose File</label>
+                                                            <input type="file" class="form-control" id="userFile"
+                                                                accept=".xlsx,.csv">
+                                                        </div>
+                                                        <div id="filePreview" class="mt-3"></div>
+                                                        <!-- File preview and loading message will be here -->
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" id="processFile"
+                                                            class="btn btn-primary">Import</button>
+                                                        <button type="button" class="btn btn-secondary"
+                                                            data-bs-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        <script type="text/javascript">
+                                            // Function to confirm and delete users
+                                            var confirmIt = function(e) {
+                                                e.preventDefault();
+                                                if (confirm("{{ __('messages.confirm.delete.user') }}")) {
+                                                    var userId = this.getAttribute('data-id');
+                                                    this.innerHTML =
+                                                        '<div class="d-flex justify-content-center"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+                                                    deleteUserData(userId);
+                                                }
+                                            };
+
+                                            var deleteUserData = function(userId) {
+                                                var xhr = new XMLHttpRequest();
+                                                xhr.open('POST', `{{ route('deleteTableUser', ['id' => ':id']) }}`.replace(':id', userId), true);
+                                                xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
+                                                xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+                                                xhr.onreadystatechange = function() {
+                                                    if (xhr.readyState === 4 && xhr.status === 200) {
+                                                        refreshLivewireTable();
+                                                    }
+                                                };
+                                                xhr.send(JSON.stringify({
+                                                    id: userId
+                                                }));
+                                            };
+
+                                            // Function to handle user actions (verification and blocking)
+                                            var handleUserClick = function(e) {
+                                                e.preventDefault();
+                                                var userId = this.getAttribute('data-id');
+                                                this.innerHTML =
+                                                    '<div class="d-flex justify-content-center"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+                                                sendUserAction(userId);
+                                            };
+
+                                            var sendUserAction = function(userId) {
+                                                var xhr = new XMLHttpRequest();
+                                                xhr.open('GET', userId, true);
+                                                xhr.onreadystatechange = function() {
+                                                    if (xhr.readyState === 4 && xhr.status === 200) {
+                                                        refreshLivewireTable();
+                                                    }
+                                                };
+                                                xhr.send();
+                                            };
+
+                                            // Attach click event listeners to elements with class 'confirmation', 'user-email', and 'user-block'
+                                            var attachClickEventListeners = function(className, handler) {
+                                                var elems = document.getElementsByClassName(className);
+                                                for (var i = 0, l = elems.length; i < l; i++) {
+                                                    elems[i].addEventListener('click', handler, false);
+                                                }
+                                            };
+
+                                            // Function to refresh the Livewire table
+                                            var refreshLivewireTable = function() {
+                                                Livewire.components.getComponentsByName('user-table')[0].$wire.$refresh()
+                                            };
+
+                                            attachClickEventListeners('confirmation', confirmIt);
+                                            attachClickEventListeners('user-email', handleUserClick);
+                                            attachClickEventListeners('user-block', handleUserClick);
+                                            attachClickEventListeners('user-status', handleUserClick);
+
+
+                                            let parsedData = []; // Global variable to store parsed data
+
+                                            document.getElementById('processFile').addEventListener('click', () => {
+                                                const fileInput = document.getElementById('userFile');
+                                                const file = fileInput.files[0];
+
+                                                if (!file) {
+                                                    alert('Please select a file.');
+                                                    return;
+                                                }
+
+                                                if (file.name.endsWith('.csv')) {
+                                                    // Parse CSV file
+                                                    Papa.parse(file, {
+                                                        header: true,
+                                                        complete: function(results) {
+                                                            parsedData = results.data.filter(row => validateRow(row));
+                                                            uploadData();
+                                                        },
+                                                        error: function(error) {
+                                                            console.error('Error parsing CSV:', error);
+                                                            alert('Error parsing the CSV file.');
+                                                        },
+                                                    });
+                                                } else if (file.name.endsWith('.xlsx')) {
+                                                    // Parse XLSX file
+                                                    const reader = new FileReader();
+                                                    reader.onload = (e) => {
+                                                        const data = new Uint8Array(e.target.result);
+                                                        const workbook = XLSX.read(data, {
+                                                            type: 'array'
+                                                        });
+                                                        const sheetName = workbook.SheetNames[0];
+                                                        parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]).filter(row => validateRow(
+                                                            row));
+                                                        uploadData();
+                                                    };
+                                                    reader.readAsArrayBuffer(file);
+                                                } else {
+                                                    alert('Invalid file format. Please upload a .csv or .xlsx file.');
+                                                }
+                                            });
+
+                                            function validateRow(row) {
+                                                // Check if all fields in the row are either non-empty or meet specific criteria
+                                                return Object.values(row).some(value => value && value.toString().trim() !== '');
+                                            }
+
+                                            function uploadData() {
+                                                // Get the file input container
+                                                const filePreviewDiv = document.getElementById('filePreview');
+
+                                                // Create the loading message and append it below the file input
+                                                const loadingMessage = document.createElement('div');
+                                                loadingMessage.textContent = 'Importing users...';
+                                                loadingMessage.id = 'loading-message';
+                                                loadingMessage.style.backgroundColor = '#f8f9fa';
+                                                loadingMessage.style.color = '#6c757d';
+                                                loadingMessage.style.padding = '10px';
+                                                loadingMessage.style.borderRadius = '5px';
+                                                loadingMessage.style.fontSize = '14px';
+                                                loadingMessage.style.marginTop = '10px';
+                                                filePreviewDiv.appendChild(loadingMessage);
+
+                                                // Perform the fetch request
+                                                fetch('{{ route('importUsers') }}', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                                        },
+                                                        body: JSON.stringify({
+                                                            users: parsedData
+                                                        }),
+                                                    })
+                                                    .then((response) => response.json())
+                                                    .then((data) => {
+                                                        alert(data.message); // Show the success message
+                                                        location.reload(); // Reload the page
+                                                    })
+                                                    .catch((error) => {
+                                                        console.error('Error uploading data:', error);
+                                                        alert('Failed to upload data.');
+                                                    })
+                                                    .finally(() => {
+                                                        // Remove the loading message when done (success or error)
+                                                        const loadingMessage = document.getElementById('loading-message');
+                                                        if (loadingMessage) {
+                                                            loadingMessage.remove();
+                                                        }
+                                                    });
+                                            }
+
+                                            document.addEventListener('DOMContentLoaded', function() {
+                                                $('#downloadUnsetUsers').on('click', function() {
+                                                    var button = $(this);
+                                                    var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+                                                    var loadingText = document.getElementById('loadingText');
+
+                                                    // Show the modal before sending the request
+                                                    loadingModal.show();
+
+                                                    // Initial text
+                                                    loadingText.textContent = "Processing your request, please wait...";
+
+                                                    // Send a request to get the download link
+                                                    $.ajax({
+                                                        url: '/generate-qr-code', // Your route to generate QR code
+                                                        method: 'POST',
+                                                        data: {
+                                                            _token: '{{ csrf_token() }}' // CSRF token for security
+                                                        },
+                                                        xhrFields: {
+                                                            responseType: 'blob' // Handle binary data
+                                                        },
+                                                        success: function(response) {
+                                                            // Hide the modal when the response is received
+                                                            loadingModal.hide();
+
+                                                            // Create a URL for the blob data
+                                                            var url = URL.createObjectURL(response);
+                                                            var today = new Date();
+                                                            var dateString = today.getFullYear() + '-' + 
+                                                                ('0' + (today.getMonth() + 1)).slice(-2) + '-' + 
+                                                                ('0' + today.getDate()).slice(-2);
+
+                                                            var filename = 'QR_Codes_' + dateString + '.xlsx'; // Filename with current date
+
+                                                            // Create a link element and trigger the download
+                                                            var link = document.createElement('a');
+                                                            link.href = url;
+                                                            link.download = filename;
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+
+                                                            // Revoke the object URL after download
+                                                            URL.revokeObjectURL(url);
+                                                        },
+                                                        error: function() {
+                                                            // Hide the modal if an error occurs
+                                                            loadingModal.hide();
+
+                                                            // Handle error
+                                                            alert('An error occurred while generating the QR codes.');
+                                                        }
+                                                    });
+                                                });
+                                            });
+                                        </script>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @push('sidebar-stylesheets')
+        <script defer src="{{ url('assets/js/cdn.min.js') }}"></script>
+        <script src="{{ url('vendor/livewire/livewire/dist/livewire.js') }}"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    @endpush
+
+    @push('sidebar-scripts')
+        <livewire:scripts />
+        <script src="{{ url('assets/js/livewire-sortable.js') }}"></script>
+    @endpush
+@endsection
