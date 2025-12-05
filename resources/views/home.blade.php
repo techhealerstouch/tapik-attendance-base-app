@@ -429,7 +429,7 @@
                 {{ __('messages.Copyright') }} &copy; @php echo date('Y'); @endphp {{ config('app.name') }}
 
                 {{-- @if (env('DISPLAY_CREDIT_FOOTER') === true)
-                    <a href="https://naitas.ph/" target="_blank" rel="noopener noreferrer"
+                    <a href="{{ config('app.url') }}" target="_blank" rel="noopener noreferrer"
                         style="display: flex; justify-content: center; align-items: center;">
 
                         <img src="https://naitas.ph/wp-content/uploads/2023/10/naitas-logo.png" alt="Naitas Logo"

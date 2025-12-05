@@ -1,8 +1,8 @@
 /assets/favicon/icons
 /node_modules
 /public/hot
-/public/
-/public/storage
+# /public/
+# /public/storage
 /storage/*.key
 /vendor
 .env

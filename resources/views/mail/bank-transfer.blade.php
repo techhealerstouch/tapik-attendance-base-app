@@ -12,10 +12,10 @@ We are writing to inform you that we have not yet received your payment via bank
 - **Account Name:** {{ $data['account_name'] }}
 - **Account Number:** {{ $data['account_number'] }}
 
-Please ensure that the payment is made before the due date to avoid any service interruptions. Once the payment has been completed, kindly send us the transaction receipt to **admin@philtoa.ph**.
+Please ensure that the payment is made before the due date to avoid any service interruptions. Once the payment has been completed, kindly send us the transaction receipt to **admin@admin.ph**.
 
 If you have any questions or require further assistance, feel free to contact us.
 
 Best regards,<br>
-PHILTOA
+{{ config('app.name') }}
 </x-mail::message>

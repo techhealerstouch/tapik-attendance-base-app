@@ -795,7 +795,7 @@
             <div class="right-panel ">
 
                 {{ __('messages.Copyright') }} &copy; @php echo date('Y'); @endphp <a
-                    href="https://tapik.ph">{{ config('app.name') }}</a>
+                    href="{{ config('app.url') }}">{{ config('app.name') }}</a>
 
             </div>
 

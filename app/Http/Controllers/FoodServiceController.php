@@ -7,10 +7,12 @@ use App\Models\User;
 use App\Models\FoodService;
 use App\Models\FoodServiceClaim;
 use App\Models\EventFoodService;
+use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class FoodServiceController extends Controller
 {
@@ -104,12 +106,40 @@ class FoodServiceController extends Controller
      */
     public function claimInterface()
     {
-        $events = Event::where('status', 'active')
-            ->orWhere('start', '>=', now())
-            ->orderBy('start')
-            ->get();
-        
+        $events = Event::orderBy('start', 'desc')->get();
+
         return view('food-services.claim-interface', compact('events'));
+    }
+
+    public function claimingPage(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'event_id' => 'required|exists:events,id',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('food-service.claim-interface')
+                ->with('error', 'Please select a valid event');
+        }
+
+        $event = Event::findOrFail($request->event_id);
+
+        return view('food-services.claiming-page', compact('event'));
+    }
+
+    /**
+     * Check if user has valid attendance for the event
+     */
+    private function hasValidAttendance($userId, $eventId)
+    {
+        $attendance = Attendance::where('user_id', $userId)
+            ->where('event_id', $eventId)
+            ->whereNotNull('time_in')
+            ->first();
+
+        // User must have checked in (time_in is not null)
+        // Status should be 'present' or similar valid status
+        return $attendance !== null && in_array(strtolower($attendance->status), ['present', 'checked in', 'attended']);
     }
 
     /**
@@ -126,17 +156,82 @@ class FoodServiceController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
-        // Find user by RFID or activate_code
-        $user = User::where('rfid_no', $request->identifier)
-            ->orWhere('activate_code', $request->identifier)
-            ->first();
+        if (filter_var($request->identifier, FILTER_VALIDATE_URL)) {
+            // Extract the user ID from the URL (assuming the user ID is the last segment of the URL)
+            $userId = basename($request->identifier);
+            Log::info($userId);
+            Log::info($request->identifier);
 
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
+            // Find the user using the extracted user ID
+            $user = User::where('activate_code', $userId)
+                ->orWhere('id', $userId)
+                ->first();
+
+            if (!$user) {
+                return response()->json(['error' => 'User not found'], 404);
+            }
+
+            $attendance = Attendance::where('user_id', $user->id)
+                ->where('event_id', $request->event_id)
+                ->first();
+
+            if (!$attendance) {
+                return response()->json(['error' => 'You are not part of this event. Please contact admin or support.'], 404);
+            }
+        } else {
+            // Find user by activate_code
+            Log::info($request->identifier);
+            $user = User::where('activate_code', $request->identifier)
+                ->orWhere('id', $request->identifier)
+                ->first();
+
+
+            if (!$user) {
+                return response()->json(['error' => 'User not found'], 404);
+            }
         }
 
+        // Check if user is part of the event (registered)
+        $attendanceRecord = \App\Models\Attendance::where('user_id', $user->id)
+            ->where('event_id', $request->event_id)
+            ->first();
+
+        if (!$attendanceRecord) {
+            return response()->json([
+                'error' => 'User is not part of this event',
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+                'event_registration_required' => true
+            ], 403);
+        }
+
+        // Check if user has valid attendance
+        $hasAttendance = $this->hasValidAttendance($user->id, $request->event_id);
+
+        if (!$hasAttendance) {
+            return response()->json([
+                'error' => 'User must check in to the event first before claiming food services',
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+                'attendance_required' => true
+            ], 403);
+        }
+
+        // Record the scan (increment if exists, create if not)
+        $scanRecord = \App\Models\IdentifierScan::recordScan(
+            $request->event_id,
+            $user->id,
+            $request->identifier
+        );
+
         // Find event with food services
-        $event = Event::with(['foodServices' => function($query) {
+        $event = Event::with(['foodServices' => function ($query) {
             $query->orderBy('order');
         }])->find($request->event_id);
 
@@ -191,6 +286,13 @@ class FoodServiceController extends Controller
                 'end' => $event->end->format('Y-m-d H:i'),
             ],
             'food_services' => $foodServicesStatus,
+            'has_attendance' => true,
+            'is_registered' => true,
+            'scan_info' => [
+                'scan_count' => $scanRecord->scan_count,
+                'first_scanned_at' => $scanRecord->first_scanned_at->format('Y-m-d H:i:s'),
+                'last_scanned_at' => $scanRecord->last_scanned_at->format('Y-m-d H:i:s'),
+            ],
         ]);
     }
 
@@ -209,6 +311,14 @@ class FoodServiceController extends Controller
 
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 400);
+        }
+
+        // CRITICAL: Check if user has valid attendance first
+        if (!$this->hasValidAttendance($request->user_id, $request->event_id)) {
+            return response()->json([
+                'error' => 'User must check in to the event first before claiming food services',
+                'attendance_required' => true
+            ], 403);
         }
 
         // Verify food service is available for this event
@@ -312,74 +422,95 @@ class FoodServiceController extends Controller
         $events = Event::with('foodServices')
             ->orderBy('start', 'desc')
             ->get();
-        
+
         return view('food-services.reports', compact('events'));
     }
 
     /**
      * Get event report data
      */
-    public function getEventReport($eventId)
-    {
-        $event = Event::with(['foodServices', 'claims.user', 'claims.foodService', 'claims.claimedBy'])
-            ->findOrFail($eventId);
+    /**
+ * Get event report data
+ */
+public function getEventReport($eventId)
+{
+    $event = Event::with(['foodServices'])->findOrFail($eventId);
 
-        $report = $event->foodServices->map(function ($service) use ($event) {
-            $claims = FoodServiceClaim::where('event_id', $event->id)
-                ->where('food_service_id', $service->id)
-                ->with(['user', 'claimedBy'])
-                ->orderBy('claimed_at')
-                ->get();
+    // Only get claims that belong to THIS event
+    $eventClaims = FoodServiceClaim::where('event_id', $event->id)
+        ->with(['user', 'foodService', 'claimedBy'])
+        ->get();
 
-            $eventFoodService = EventFoodService::where('event_id', $event->id)
-                ->where('food_service_id', $service->id)
-                ->first();
+    $report = $event->foodServices->map(function ($service) use ($event, $eventClaims) {
+        // Filter claims for this specific food service AND this event
+        $claims = $eventClaims->where('food_service_id', $service->id);
 
+        $eventFoodService = EventFoodService::where('event_id', $event->id)
+            ->where('food_service_id', $service->id)
+            ->first();
+
+        return [
+            'food_service_id' => $service->id,
+            'food_service_name' => $service->name,
+            'total_quantity' => $eventFoodService->quantity ?? 'Unlimited',
+            'total_claimed' => $claims->count(),
+            'remaining' => $eventFoodService->quantity ? max(0, $eventFoodService->quantity - $claims->count()) : 'N/A',
+            'claims' => $claims->map(function ($claim) {
+                return [
+                    'id' => $claim->id,
+                    'user_name' => $claim->user->name,
+                    'user_email' => $claim->user->email,
+                    'claimed_at' => $claim->claimed_at->format('Y-m-d H:i:s'),
+                    'claimed_by' => $claim->claimedBy?->name ?? 'System',
+                    'claim_method' => ucfirst($claim->claim_method),
+                    'notes' => $claim->notes,
+                ];
+            })->values(), // Use values() to reset array keys
+        ];
+    });
+
+    // Get scan statistics for this event
+    $scanStats = \App\Models\IdentifierScan::where('event_id', $event->id)
+        ->with('user')
+        ->orderByDesc('scan_count')
+        ->get()
+        ->map(function ($scan) {
             return [
-                'food_service_id' => $service->id,
-                'food_service_name' => $service->name,
-                'total_quantity' => $eventFoodService->quantity ?? 'Unlimited',
-                'total_claimed' => $claims->count(),
-                'remaining' => $eventFoodService->quantity ? max(0, $eventFoodService->quantity - $claims->count()) : 'N/A',
-                'claims' => $claims->map(function ($claim) {
-                    return [
-                        'id' => $claim->id,
-                        'user_name' => $claim->user->name,
-                        'user_email' => $claim->user->email,
-                        'claimed_at' => $claim->claimed_at->format('Y-m-d H:i:s'),
-                        'claimed_by' => $claim->claimedBy?->name ?? 'System',
-                        'claim_method' => ucfirst($claim->claim_method),
-                        'notes' => $claim->notes,
-                    ];
-                }),
+                'user_id' => $scan->user_id,
+                'user_name' => $scan->user->name,
+                'user_email' => $scan->user->email,
+                'scan_count' => $scan->scan_count,
+                'first_scanned_at' => $scan->first_scanned_at->format('Y-m-d H:i:s'),
+                'last_scanned_at' => $scan->last_scanned_at->format('Y-m-d H:i:s'),
             ];
         });
 
-        return response()->json([
-            'event' => [
-                'id' => $event->id,
-                'title' => $event->title,
-                'start' => $event->start->format('Y-m-d H:i'),
-                'end' => $event->end->format('Y-m-d H:i'),
-            ],
-            'report' => $report,
-            'summary' => [
-                'total_services' => $event->foodServices->count(),
-                'total_claims' => $event->claims->count(),
-                'unique_users' => $event->claims->unique('user_id')->count(),
-            ],
-        ]);
-    }
+    return response()->json([
+        'event' => [
+            'id' => $event->id,
+            'title' => $event->title,
+            'start' => $event->start->format('Y-m-d H:i'),
+            'end' => $event->end->format('Y-m-d H:i'),
+        ],
+        'report' => $report,
+        'summary' => [
+            'total_services' => $event->foodServices->count(),
+            'total_claims' => $eventClaims->count(),
+            'unique_users' => $eventClaims->unique('user_id')->count(),
+        ],
+        'scan_stats' => $scanStats,
+    ]);
+}
 
     /**
-     * Export report to CSV
+     * Export comprehensive report to CSV
      */
     public function exportReport($eventId)
     {
         $event = Event::with(['foodServices', 'claims.user', 'claims.foodService', 'claims.claimedBy'])
             ->findOrFail($eventId);
 
-        $filename = 'food-service-report-' . $event->id . '-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'food-service-report-' . Str::slug($event->title) . '-' . now()->format('Y-m-d-His') . '.csv';
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -389,23 +520,121 @@ class FoodServiceController extends Controller
         $callback = function () use ($event) {
             $file = fopen('php://output', 'w');
 
-            // Header
-            fputcsv($file, ['Event', $event->title]);
-            fputcsv($file, ['Date', $event->start->format('Y-m-d') . ' to ' . $event->end->format('Y-m-d')]);
+            // UTF-8 BOM for proper Excel encoding
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // HEADER SECTION
+            fputcsv($file, ['FOOD SERVICE REPORT']);
+            fputcsv($file, ['Event:', $event->title]);
+            fputcsv($file, ['Date:', $event->start->format('F d, Y') . ' to ' . $event->end->format('F d, Y')]);
+            fputcsv($file, ['Report Generated:', now()->format('F d, Y H:i:s')]);
             fputcsv($file, []);
 
-            // Claims data
-            fputcsv($file, ['Food Service', 'User Name', 'User Email', 'Claimed At', 'Claimed By', 'Method', 'Notes']);
+            // SUMMARY SECTION
+            $totalClaims = $event->claims->count();
+            $uniqueUsers = $event->claims->unique('user_id')->count();
+            $totalServices = $event->foodServices->count();
 
-            foreach ($event->claims as $claim) {
+            fputcsv($file, ['SUMMARY']);
+            fputcsv($file, ['Total Food Services:', $totalServices]);
+            fputcsv($file, ['Total Claims:', $totalClaims]);
+            fputcsv($file, ['Unique Users:', $uniqueUsers]);
+            fputcsv($file, ['Average Claims per Service:', $totalServices > 0 ? round($totalClaims / $totalServices, 2) : 0]);
+            fputcsv($file, []);
+
+            // SERVICE BREAKDOWN SECTION
+            fputcsv($file, ['SERVICE BREAKDOWN']);
+            fputcsv($file, ['Food Service', 'Total Quantity', 'Total Claimed', 'Remaining', 'Utilization %']);
+
+            foreach ($event->foodServices as $service) {
+                $eventFoodService = EventFoodService::where('event_id', $event->id)
+                    ->where('food_service_id', $service->id)
+                    ->first();
+
+                $claimedCount = FoodServiceClaim::where('event_id', $event->id)
+                    ->where('food_service_id', $service->id)
+                    ->count();
+
+                $quantity = $eventFoodService->quantity ?? 'Unlimited';
+                $remaining = $eventFoodService->quantity ? max(0, $eventFoodService->quantity - $claimedCount) : 'N/A';
+                $utilization = ($quantity !== 'Unlimited' && $quantity > 0) ? round(($claimedCount / $quantity) * 100, 1) . '%' : 'N/A';
+
+                fputcsv($file, [
+                    $service->name,
+                    $quantity,
+                    $claimedCount,
+                    $remaining,
+                    $utilization
+                ]);
+            }
+            fputcsv($file, []);
+
+            // DETAILED CLAIMS SECTION
+            fputcsv($file, ['DETAILED CLAIMS']);
+            fputcsv($file, ['Food Service', 'User Name', 'User Email', 'Claimed Date', 'Claimed Time', 'Claimed By', 'Method', 'Notes']);
+
+            foreach ($event->claims()->with(['foodService', 'user', 'claimedBy'])->orderBy('claimed_at')->get() as $claim) {
                 fputcsv($file, [
                     $claim->foodService->name,
                     $claim->user->name,
                     $claim->user->email,
-                    $claim->claimed_at->format('Y-m-d H:i:s'),
+                    $claim->claimed_at->format('Y-m-d'),
+                    $claim->claimed_at->format('H:i:s'),
                     $claim->claimedBy?->name ?? 'System',
                     ucfirst($claim->claim_method),
-                    $claim->notes,
+                    $claim->notes ?? '',
+                ]);
+            }
+
+            // USER PARTICIPATION SECTION
+            fputcsv($file, []);
+            fputcsv($file, ['USER PARTICIPATION']);
+            fputcsv($file, ['User Name', 'Email', 'Total Claims', 'Services Claimed']);
+
+            $userStats = $event->claims()
+                ->with('user')
+                ->select('user_id', DB::raw('count(*) as total_claims'))
+                ->groupBy('user_id')
+                ->orderByDesc('total_claims')
+                ->get();
+
+            foreach ($userStats as $stat) {
+                $servicesClaimed = $event->claims()
+                    ->where('user_id', $stat->user_id)
+                    ->with('foodService')
+                    ->get()
+                    ->pluck('foodService.name')
+                    ->implode(', ');
+
+                fputcsv($file, [
+                    $stat->user->name,
+                    $stat->user->email,
+                    $stat->total_claims,
+                    $servicesClaimed
+                ]);
+            }
+
+            // TIMELINE SECTION
+            fputcsv($file, []);
+            fputcsv($file, ['CLAIMS TIMELINE']);
+            fputcsv($file, ['Date', 'Hour', 'Total Claims']);
+
+            $timeline = $event->claims()
+                ->select(
+                    DB::raw('DATE(claimed_at) as claim_date'),
+                    DB::raw('HOUR(claimed_at) as claim_hour'),
+                    DB::raw('count(*) as total')
+                )
+                ->groupBy('claim_date', 'claim_hour')
+                ->orderBy('claim_date')
+                ->orderBy('claim_hour')
+                ->get();
+
+            foreach ($timeline as $entry) {
+                fputcsv($file, [
+                    $entry->claim_date,
+                    sprintf('%02d:00', $entry->claim_hour),
+                    $entry->total
                 ]);
             }
 

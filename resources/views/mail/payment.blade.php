@@ -16,8 +16,8 @@ To complete your registration and secure your spot, please make the payment by t
 Pay via Xendit
 </x-mail::button>
 
-If you have any questions or encounter any issues, please feel free to contact us at admin@philtoa.ph.
+If you have any questions or encounter any issues, please feel free to contact us at admin@{{ config('app.name') }}.ph.
 
 Best regards,<br>
-PHILTOA
+{{ config('app.name') }}
 </x-mail::message>

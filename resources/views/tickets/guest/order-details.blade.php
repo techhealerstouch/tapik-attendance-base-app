@@ -577,7 +577,7 @@
                         <span class="address-line">If you have any questions or concerns, contact us:</span>
                     </div>
                     <div class="money d-flex flex-column mt-1 align-items-center">
-                        <span class="ml-2">admin@philtoa.ph</span>
+                        <span class="ml-2">admin@{{ config('app.name') }}.ph</span>
                         <span class="ml-2">placeholder@gmail.com</span>
                         <span class="ml-2">+63977 804 3787</span>
                     </div>
@@ -629,7 +629,7 @@
 
             <div class="right-panel ">
 
-                {{ __('messages.Copyright') }} &copy; @php echo date('Y'); @endphp <a href="https://tapik.ph">{{ config('app.name') }}</a>
+                {{ __('messages.Copyright') }} &copy; @php echo date('Y'); @endphp <a href="{{ config('app.url') }}">{{ config('app.name') }}</a>
 
             </div>
 

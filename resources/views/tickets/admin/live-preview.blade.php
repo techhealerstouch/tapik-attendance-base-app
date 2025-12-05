@@ -1,149 +1,323 @@
 @extends('layouts.sidebar')
 
 @section('content')
-    <script src="{{ asset('resources/ckeditor/ckeditor.js') }}"></script>
-    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css">
-    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
-    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.0/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous">
-    </script>
-    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-        <symbol id="check-circle-fill" fill="currentColor" viewBox="0 0 16 16">
-            <path
-                d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z" />
-        </symbol>
-        <symbol id="info-fill" fill="currentColor" viewBox="0 0 16 16">
-            <path
-                d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" />
-        </symbol>
-        <symbol id="exclamation-triangle-fill" fill="currentColor" viewBox="0 0 16 16">
-            <path
-                d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-        </symbol>
-    </svg>
     <style>
-        /* body {
-        font-family: Arial, sans-serif;
-        background-color: #f0f0f0;
-        margin: 0;
-        padding: 20px;
-        } */
-
-        .container {
-        max-width: 600px;
-        margin: 0 auto;
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
         }
 
-        h1 {
-        text-align: center;
-        color: #333;
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .stats-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .event-card {
-        background-color: white;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
         }
 
-        .event-card:first-child {
-        border-left: 4px solid #4caf50;
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .event-card h2 {
-        margin: 0 0 5px 0;
-        color: #333;
+            margin: 0 0 8px 0;
+            color: #2d3748;
+            font-size: 1.1rem;
+            font-weight: 600;
         }
 
-        .event-card p {
-        margin: 0;
-        color: #666;
+        .event-card .time {
+            color: #718096;
+            font-size: 0.875rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .event-card .event {
-        color: #1e88e5;
-        font-weight: bold;
+        .event-card .event-title {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-
-        .event-card2 {
-        background-color: white;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
+        .member-badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
         }
 
-        .event-card2:first-child {
-        border-left: 4px solid #4caf50;
+        .guest-badge {
+            background: #f59e0b;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
         }
 
-        .event-card2 h2 {
-        margin: 0 0 5px 0;
-        color: #333;
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
         }
 
-        .event-card2 p {
-        margin: 0;
-        color: #666;
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .event-card2 .event {
-        color: #1e88e5;
-        font-weight: bold;
+        .count-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
         }
 
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
 
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #718096;
+        }
+
+        .empty-state small {
+            color: #a0aec0;
+        }
+
+        .select2-container {
+            z-index: 9999 !important;
+        }
+
+        .select2-dropdown {
+            z-index: 10060 !important;
+        }
+
+        .auto-refresh-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f7fafc;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: #4a5568;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: #48bb78;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .card-header-custom {
+            border-left: 4px solid #667eea;
+            background: linear-gradient(to right, #f7fafc, white);
+        }
     </style>
-    <div class="container-fluid content-inner mt-n5 py-0">
 
-    <div class="row">
+    <div class="container-fluid content-inner mt-n5 py-0">
+        <div class="row">
             <div class="col-lg-12">
                 <div class="card rounded">
+                    <div class="card-header card-header-custom">
+                        <h4 class="card-title mb-2">
+                            <i class="fas fa-broadcast-tower"></i> Live Attendance Preview
+                        </h4>
+                        <p class="text-muted mb-0">
+                            <small><i class="fas fa-info-circle"></i> Real-time attendance monitoring with auto-refresh every 5 seconds</small>
+                        </p>
+                    </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-sm-12">
-                                <section class="text-gray-400">
-                                    <div class="col-sm-6">
-                                        <ol class="breadcrumb">
-                                            <li class="breadcrumb-item"><a href="/dashboard">Home</a></li>
-                                            <li class="breadcrumb-item"><a href="/attendance">Attendance</a></li>
-                                            <li class="breadcrumb-item">Live Preview</li>
-                                        </ol>
-                                    </div>
-                                    <h1>Live Preview</h1>
-                                    <div style="max-width: 600px !important; display: flex; justify-content: center; margin: 0 auto;">
-                                        <select style="width: 100% !important" id="event-filter" class="form-control select2">
-                                            <option value="all">All Events</option>
-                                            @foreach($events as $event)
-                                                <option value="{{ $event->id }}">{{ $event->title }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <h3 class="mt-5 text-center">Members</h3>
-                                            <hr>
-                                            <div class="mt-3" id="event-stack"></div>
+                        <!-- Event Selection -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <label for="event-filter" class="form-label fw-bold">
+                                    <i class="fas fa-calendar-alt"></i> Select Event
+                                </label>
+                                <select id="event-filter" class="form-control">
+                                    <option value="">-- Select Event --</option>
+                                    @foreach($events as $event)
+                                        <option value="{{ $event->id }}">{{ $event->title }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="limit-filter" class="form-label fw-bold">
+                                    <i class="fas fa-list-ol"></i> Display Limit
+                                </label>
+                                <select id="limit-filter" class="form-control">
+                                    <option value="10">Show 10 Recent</option>
+                                    <option value="100">Show 100 Recent</option>
+                                    <option value="500">Show 500 Recent</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold d-block">
+                                    <i class="fas fa-ticket-alt"></i> Display Options
+                                </label>
+                                <div class="form-check" style="padding-top: 8px;">
+                                    <input class="form-check-input" type="checkbox" id="show-guests-checkbox">
+                                    <label class="form-check-label" for="show-guests-checkbox">
+                                        Display Guests Checked In
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Auto Refresh Indicator -->
+                        <div class="row mb-3">
+                            <div class="col-12 d-flex justify-content-end">
+                                <div class="auto-refresh-indicator">
+                                    <span class="pulse-dot"></span>
+                                    <span>Auto-refreshing every 15 seconds</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content Area -->
+                        <div id="content-area">
+                            <!-- Default Empty State -->
+                            <div class="empty-state">
+                                <i class="fas fa-calendar-check"></i>
+                                <p class="mb-2">No Event Selected</p>
+                                <small>Please select an event from the dropdown above to view live attendance</small>
+                            </div>
+                        </div>
+
+                        <!-- Stats and Data (Hidden by default) -->
+                        <div id="data-container" style="display: none;">
+                            <!-- Statistics Row -->
+                            <div class="row mb-4">
+                                <div class="col-md-6" id="member-stats-card">
+                                    <div class="stats-card">
+                                        <div class="stats-number" id="member-count">0/0</div>
+                                        <div class="stats-label">
+                                            <i class="fas fa-users"></i> Members Present
                                         </div>
-                                        <div class="col-md-6">
-                                            <h3 class="mt-5 text-center">Guests</h3>
-                                            <hr>
-                                            <div class="mt-3" id="event-stack-2"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6" id="guest-stats-card" style="display: none;">
+                                    <div class="stats-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                                        <div class="stats-number" id="guest-count">0</div>
+                                        <div class="stats-label">
+                                            <i class="fas fa-ticket-alt"></i> Guests Checked In
                                         </div>
                                     </div>
-                                </section>
+                                </div>
+                            </div>
+
+                            <!-- Attendance Data Row -->
+                            <div class="row">
+                                <div id="member-column" class="col-md-12">
+                                    <div class="section-header">
+                                        <div class="section-title">
+                                            <i class="fas fa-users"></i>
+                                            <span>Members</span>
+                                        </div>
+                                        <span class="count-badge" id="member-badge">0</span>
+                                    </div>
+                                    <div id="event-stack"></div>
+                                </div>
+                                <div id="guest-column" class="col-md-6" style="display: none;">
+                                    <div class="section-header">
+                                        <div class="section-title">
+                                            <i class="fas fa-ticket-alt"></i>
+                                            <span>Guests</span>
+                                        </div>
+                                        <span class="count-badge" id="guest-badge" style="background: #f59e0b;">0</span>
+                                    </div>
+                                    <div id="event-stack-2"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -151,37 +325,212 @@
             </div>
         </div>
     </div>
+@endsection
 
-    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
-    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.0/xlsx.full.min.js"></script>
+@push('sidebar-scripts')
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-    <script>
-  $(document).ready(function() {
-    $('.select2').select2();
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
-    let selectedEventId = 'all'; // Default eventId to "all"
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    // Update the fetch events function to use the correct URL
-    function fetchEvents(eventId) {
+<script>
+(function() {
+    'use strict';
+    
+    let selectedEventId = null;
+    let selectedLimit = 10; // Default limit
+    let showGuests = false; // Default to hide guests
+    let totalMembers = 0;
+    let refreshInterval = null;
+
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing...');
+        
+        // Wait a bit for Select2 to be fully loaded
+        setTimeout(function() {
+            initializeSelect2();
+            initializeEventHandlers();
+            showEmptyState();
+        }, 100);
+    });
+
+    function initializeSelect2() {
+        try {
+            if (typeof $.fn.select2 !== 'undefined') {
+                $('#event-filter').select2({
+                    theme: 'bootstrap-5',
+                    placeholder: '-- Select Event --',
+                    allowClear: true,
+                    width: '100%'
+                });
+                
+                $('#limit-filter').select2({
+                    theme: 'bootstrap-5',
+                    minimumResultsForSearch: Infinity, // Disable search for small list
+                    width: '100%'
+                });
+                
+                console.log('Select2 initialized successfully');
+            } else {
+                console.error('Select2 is not loaded');
+                // Fallback: use regular select
+                $('#event-filter').addClass('form-select');
+                $('#limit-filter').addClass('form-select');
+            }
+        } catch (e) {
+            console.error('Error initializing Select2:', e);
+            // Fallback: use regular select
+            $('#event-filter').addClass('form-select');
+            $('#limit-filter').addClass('form-select');
+        }
+    }
+
+    function initializeEventHandlers() {
+        // Event selection change
+        $('#event-filter').on('change', function() {
+            selectedEventId = $(this).val();
+            console.log('Event selected:', selectedEventId);
+            
+            // Clear existing interval
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+            
+            if (selectedEventId) {
+                fetchEvents(selectedEventId, selectedLimit);
+                // Start auto-refresh
+                refreshInterval = setInterval(() => {
+                    fetchEvents(selectedEventId, selectedLimit);
+                }, 15000);
+            } else {
+                showEmptyState();
+            }
+        });
+        
+        // Limit selection change
+        $('#limit-filter').on('change', function() {
+            selectedLimit = parseInt($(this).val());
+            console.log('Limit changed to:', selectedLimit);
+            
+            // If an event is already selected, refresh with new limit
+            if (selectedEventId) {
+                fetchEvents(selectedEventId, selectedLimit);
+            }
+        });
+        
+        // Show/Hide Guests checkbox change
+        $('#show-guests-checkbox').on('change', function() {
+            showGuests = $(this).is(':checked');
+            console.log('Show guests:', showGuests);
+            
+            toggleGuestDisplay();
+            
+            // If an event is already selected, refresh data
+            if (selectedEventId) {
+                fetchEvents(selectedEventId, selectedLimit);
+            }
+        });
+    }
+    
+    function toggleGuestDisplay() {
+        if (showGuests) {
+            // Show guests column and stats
+            $('#guest-column').show().removeClass('col-md-6').addClass('col-md-6');
+            $('#member-column').removeClass('col-md-12').addClass('col-md-6');
+            $('#guest-stats-card').show().removeClass('col-md-6').addClass('col-md-6');
+            $('#member-stats-card').removeClass('col-md-6').addClass('col-md-6');
+        } else {
+            // Hide guests column and stats
+            $('#guest-column').hide();
+            $('#member-column').removeClass('col-md-6').addClass('col-md-12');
+            $('#guest-stats-card').hide();
+            $('#member-stats-card').removeClass('col-md-6').addClass('col-md-12');
+        }
+    }
+
+    function fetchEvents(eventId, limit) {
+        if (!eventId) {
+            showEmptyState();
+            return;
+        }
+
+        console.log('Fetching events for:', eventId, 'with limit:', limit);
+
+        // Show loading
+        $('#data-container').show();
+        $('#content-area').hide();
+        $('#event-stack').html('<div class="loading-spinner"><div class="spinner"></div></div>');
+        $('#event-stack-2').html('<div class="loading-spinner"><div class="spinner"></div></div>');
+
         $.ajax({
-            url: '/attendance/live-attendance-user/' + eventId, // Correct the URL format
+            url: '/attendance/live-attendance-user/' + eventId,
             method: 'GET',
+            data: { limit: limit },
             dataType: 'json',
             success: function(response) {
-                if (response.attendances) {
-                    updateEventStack(response.attendances);
-                }
-                if (response.ticketGuests) {
-                    updateEventStack2(response.ticketGuests);
+                console.log('Response received:', response);
+                if (response.attendances || response.ticketGuests) {
+                    totalMembers = response.totalMembers || 0;
+                    updateEventStack(response.attendances || [], totalMembers);
+                    updateEventStack2(response.ticketGuests || []);
+                } else {
+                    showNoData();
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Error fetching events:', error);
+                showError();
             }
         });
+    }
+
+    function showEmptyState() {
+        $('#content-area').html(`
+            <div class="empty-state">
+                <i class="fas fa-calendar-check"></i>
+                <p class="mb-2">No Event Selected</p>
+                <small>Please select an event from the dropdown above to view live attendance</small>
+            </div>
+        `).show();
+        $('#data-container').hide();
+    }
+
+    function showNoData() {
+        $('#event-stack').html(`
+            <div class="empty-state" style="padding: 40px 20px;">
+                <i class="fas fa-user-slash" style="font-size: 3rem;"></i>
+                <p style="font-size: 1rem;">No members attendance data found</p>
+            </div>
+        `);
+        $('#event-stack-2').html(`
+            <div class="empty-state" style="padding: 40px 20px;">
+                <i class="fas fa-ticket-alt" style="font-size: 3rem;"></i>
+                <p style="font-size: 1rem;">No guest attendance data found</p>
+            </div>
+        `);
+        updateCounts(0, 0, 0);
+    }
+
+    function showError() {
+        $('#event-stack').html(`
+            <div class="empty-state" style="padding: 40px 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #f56565;"></i>
+                <p style="font-size: 1rem; color: #f56565;">Error loading data</p>
+            </div>
+        `);
+        $('#event-stack-2').html(`
+            <div class="empty-state" style="padding: 40px 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #f56565;"></i>
+                <p style="font-size: 1rem; color: #f56565;">Error loading data</p>
+            </div>
+        `);
     }
 
     function formatTime(dateString) {
@@ -192,53 +541,99 @@
     function createEventCard(attendance) {
         return `
             <div class="event-card">
-                <h2>${attendance.user?.name}</h2>
-                <p>${formatTime(attendance.time_in)}</p>
-                <p class="event">${attendance.event.title}</p>
+                <h2>
+                    <span class="member-badge">MEMBER</span>
+                    ${attendance.user?.name || 'N/A'}
+                </h2>
+                <div class="time">
+                    <i class="far fa-clock"></i>
+                    ${formatTime(attendance.time_in)}
+                </div>
+                <div class="event-title">
+                    <i class="fas fa-calendar"></i>
+                    ${attendance.event?.title || 'N/A'}
+                </div>
             </div>
         `;
     }
 
-    function updateEventStack(attendances) {
-    if (attendances.length === 0) {
-        $('#event-stack').html('<p style="color: gray; font-style: italic;">No members attendance data found.</p>');
-    } else {
-        $('#event-stack').html(attendances.map(createEventCard).join(''));
+    function updateEventStack(attendances, total) {
+        const presentCount = attendances.length;
+        
+        if (presentCount === 0) {
+            $('#event-stack').html(`
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <i class="fas fa-user-slash" style="font-size: 3rem;"></i>
+                    <p style="font-size: 1rem;">No members checked in yet</p>
+                </div>
+            `);
+        } else {
+            $('#event-stack').html(attendances.map(createEventCard).join(''));
+        }
+
+        updateCounts(presentCount, total, attendances.length);
     }
-}
 
     function createEventCard2(ticketGuest) {
         return `
-            <div class="event-card2">
-                <h2>${ticketGuest.ticket_no}</h2>
-                <p>${formatTime(ticketGuest.updated_at)}</p>
-                <p class="event">${ticketGuest.ticket && ticketGuest.ticket.event ? ticketGuest.ticket.event.title : 'No event'}</p>
+            <div class="event-card" style="border-left-color: #f59e0b;">
+                <h2>
+                    <span class="guest-badge">GUEST</span>
+                    ${ticketGuest.ticket_no || 'N/A'}
+                </h2>
+                <div class="time">
+                    <i class="far fa-clock"></i>
+                    ${formatTime(ticketGuest.updated_at)}
+                </div>
+                <div class="event-title" style="color: #f59e0b;">
+                    <i class="fas fa-calendar"></i>
+                    ${ticketGuest.ticket?.event?.title || 'N/A'}
+                </div>
             </div>
         `;
     }
 
     function updateEventStack2(ticketGuests) {
-    if (ticketGuests.length === 0) {
-        $('#event-stack-2').html('<p style="color: gray; font-style: italic;">No guest attendance data found.</p>');
-    } else {
-        $('#event-stack-2').html(ticketGuests.map(createEventCard2).join(''));
+        if (!showGuests) {
+            // If guests are hidden, don't update
+            return;
+        }
+        
+        const guestCount = ticketGuests.length;
+        
+        if (guestCount === 0) {
+            $('#event-stack-2').html(`
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <i class="fas fa-ticket-alt" style="font-size: 3rem;"></i>
+                    <p style="font-size: 1rem;">No guests checked in yet</p>
+                </div>
+            `);
+        } else {
+            $('#event-stack-2').html(ticketGuests.map(createEventCard2).join(''));
+        }
+
+        $('#guest-count').text(guestCount);
+        $('#guest-badge').text(guestCount);
     }
-}
 
-    // Fetch events initially with the default "all"
-    fetchEvents(selectedEventId);
+    function updateCounts(present, total, memberCount) {
+        $('#member-count').text(`${present}/${total}`);
+        $('#member-badge').text(memberCount);
+    }
 
-    // Fetch events when dropdown selection changes
-    $('#event-filter').on('change', function() {
-        selectedEventId = $(this).val();
-        fetchEvents(selectedEventId);
+    // Make functions available globally for debugging
+    window.livePreview = {
+        fetchEvents: fetchEvents,
+        showEmptyState: showEmptyState,
+        selectedEventId: function() { return selectedEventId; }
+    };
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
     });
-
-    // Fetch events every 5 seconds using the selected eventId
-    setInterval(() => {
-        fetchEvents(selectedEventId);
-    }, 5000);
-});
-
+})();
 </script>
-@endsection
+@endpush

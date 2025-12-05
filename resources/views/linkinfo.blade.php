@@ -160,7 +160,7 @@
           {{__('messages.Copyright')}} &copy; @php echo date('Y'); @endphp {{ config('app.name') }}
           @if(env('DISPLAY_CREDIT_FOOTER') === true)
                 
-             <a href="https://id.philtoa.com/" target="_blank" rel="noopener noreferrer" style="display: flex; justify-content: center; align-items: center;">
+             <a href="{{ config('app.url') }}" target="_blank" rel="noopener noreferrer" style="display: flex; justify-content: center; align-items: center;">
 
             <img class="img logo" src="{{ asset('assets/linkstack/images/'.findFile('avatar')) }}" style="max-width: 100px; max-height: 100px;">
             

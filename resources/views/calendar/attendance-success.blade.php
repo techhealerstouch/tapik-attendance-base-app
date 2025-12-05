@@ -53,7 +53,7 @@
                     <div class="col-sm-12">
                         <div style="display: flex; justify-content: center; align-items: center; cursor: pointer;">
                             <img src="{{ asset('assets/linkstack/images/'.findFile('avatar')) }}" 
-                                alt="Philtoa Logo" 
+                                alt="Logo" 
                                 style="max-width: 400px; max-height: 400px;" />
                         </div>
 

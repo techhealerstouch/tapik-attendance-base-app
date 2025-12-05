@@ -585,6 +585,8 @@ class GuestController extends Controller
                 $attendance = Attendance::where('user_id', $userId)
                 ->where('event_id', $event_id)
                 ->first();
+
+                $userName = User::where('id', $userId)->first();
     
                 if (!$attendance) {
                     
@@ -597,7 +599,7 @@ class GuestController extends Controller
                 if ($attendance && $attendance->status === 'Present') {
                     return response()->json([
                         'status' => 'already_scanned',
-                        'message' => 'You are already checked in.',
+                        'message' => "{$userName->name}, You are already checked in.",
                     ]);
                 }
                 $attendance->time_in = now();
@@ -606,7 +608,7 @@ class GuestController extends Controller
                 
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Thank you, You are now checked in.',
+                    'message' => "Thank you {$userName->name}, You are now checked in.",
                 ]);
             }else {
                 // Handle the case where ticketNo is a regular ticket number

@@ -44,7 +44,7 @@
 </head>
 <body style="display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
     <div style="text-align: center;">
-    <img src="{{ public_path('assets/linkstack/images/'.findFile('avatar')) }}" alt="Philtoa Logo" style="max-width: 400px; max-height: 400px;" />
+    <img src="{{ public_path('assets/linkstack/images/'.findFile('avatar')) }}" alt="{{ config('app.name') }}" style="max-width: 400px; max-height: 400px;" />
 
         <h2>{{ $data['event_name'] }}</h2>
         <div class="qr-code">

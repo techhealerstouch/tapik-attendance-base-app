@@ -194,6 +194,12 @@ $usrhandl = Auth::user()->name;
                                     <span class="item-name">{{__('messages.Site Customization')}}</span>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ Request::segment(2) == 'email-templates' ? 'active' : ''}}" href="{{ url('email-templates') }}">
+                                    <i class="bi bi-envelope-fill"></i>
+                                    <span class="item-name">Email Template</span>
+                                </a>
+                            </li>
                         </ul>
                     </li>
                     <li class="nav-item">
@@ -257,6 +263,12 @@ $usrhandl = Auth::user()->name;
                             <a class="nav-link {{ Request::segment(2) == 'attendance' ? 'active' : ''}}" href="{{ url('attendance') }}">
                                 <i class="bi bi-people-fill"></i>
                                 <span class="item-name">{{__('messages.Attendance')}}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ Request::segment(2) == 'attendance' ? 'active' : ''}}" href="{{ url('attendance/report') }}">
+                                <i class="bi bi-people-fill"></i>
+                                <span class="item-name">Attendance Report</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -637,7 +649,7 @@ $usrhandl = Auth::user()->name;
                 {{__('messages.Copyright')}} &copy; @php echo date('Y'); @endphp {{ config('app.name') }}
                 {{-- @if(env('DISPLAY_CREDIT_FOOTER') === true)
                 
-             <a href="https://id.philtoa.com/" target="_blank" rel="noopener noreferrer" style="display: flex; justify-content: center; align-items: center;">
+             <a href="{{ config('app.url') }}" target="_blank" rel="noopener noreferrer" style="display: flex; justify-content: center; align-items: center;">
 
 <img class="img logo" src="{{ asset('assets/linkstack/images/'.findFile('avatar')) }}" style="max-width: 100px; max-height: 100px;">
 

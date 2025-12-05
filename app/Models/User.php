@@ -202,4 +202,10 @@ class User extends Authenticatable implements MustVerifyEmail
             }
         });
     }
+
+    public function identifierScans()
+{
+    return $this->hasMany(IdentifierScan::class);
+}
+
 }

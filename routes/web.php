@@ -13,6 +13,7 @@ use App\Http\Controllers\LinkTypeViewController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\InstallerController;
 use App\Http\Controllers\FoodServiceController;
+use App\Http\Controllers\AttendanceReportController;
 use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\SendDetailsController;
@@ -23,6 +24,7 @@ use App\Mail\DetailsMail;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\GuestController;
 use App\Models\Attendee;
+use App\Http\Controllers\EmailTemplateController;
 
 use Illuminate\Support\Facades\Mail;
 use App\Mail\UserInviteMail;
@@ -245,6 +247,11 @@ Route::group([
 
     Route::get('/tickets/filter/{eventId}', [TicketController::class, 'filterTickets'])->name('tickets.filter');
 
+    //Email Template
+    Route::get('email-templates', [EmailTemplateController::class, 'index'])->name('email-templates.index');
+    Route::get('email-templates/{emailTemplate}/edit', [EmailTemplateController::class, 'edit'])->name('email-templates.edit');
+    Route::put('email-templates/{emailTemplate}', [EmailTemplateController::class, 'update'])->name('email-templates.update');
+
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [TicketController::class, 'store'])->name('tickets.store');
     Route::get('/tickets/edit/{id}', [TicketController::class, 'show'])->name('tickets.show');
@@ -289,6 +296,8 @@ Route::group([
     Route::put('/food-services/{id}', [FoodServiceController::class, 'update'])->name('food-services.update');
     Route::delete('/food-services/{id}', [FoodServiceController::class, 'destroy'])->name('food-services.destroy');
 
+    Route::get('/food-service-claiming', [FoodServiceController::class, 'claimingPage'])->name('food-service.claiming-page');
+
     // Food Service Claiming Interface
     Route::get('/food-service-claim', [FoodServiceController::class, 'claimInterface'])->name('food-service.claim-interface');
     Route::post('/food-service-claim/scan', [FoodServiceController::class, 'getUserStatus'])->name('food-service.scan');
@@ -299,7 +308,6 @@ Route::group([
     Route::get('/food-service-reports', [FoodServiceController::class, 'reports'])->name('food-service.reports');
     Route::get('/food-service-reports/export/{eventId}', [FoodServiceController::class, 'exportReport'])->name('food-service.export');
     Route::get('/food-service-reports/event/{eventId}', [FoodServiceController::class, 'getEventReport'])->name('food-service.event-report');
-
 
     //Discount
     Route::get('/discounts', [DiscountController::class, 'index'])->name('discounts.index');           // List all discounts
@@ -347,7 +355,10 @@ Route::group([
     Route::post('/attendance-input', [AttendanceController::class, 'attendance_input'])->name('attendance.page');
     Route::delete('/attendance/delete/{id}', [AttendanceController::class, 'deleteAttendance']);
 
-
+    // Attendance Report (new system)
+    Route::get('attendance/report', [AttendanceReportController::class, 'index'])->name('attendance.report.index');
+    Route::get('attendance/report/fetch', [AttendanceReportController::class, 'fetch'])->name('attendance.report.fetch');
+    Route::get('attendance/report/export', [AttendanceReportController::class, 'export'])->name('attendance.report.export');
 
 
     Route::get('/send-test-email', [AdminController::class, 'SendTestMail'])->name('SendTestMail');

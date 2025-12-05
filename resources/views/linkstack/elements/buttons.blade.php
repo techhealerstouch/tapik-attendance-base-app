@@ -223,7 +223,7 @@
 
                     <!-- Your modal content here -->
 
-                    <a href="https://id.philtoa.com/" target="_blank" rel="noopener noreferrer" style="display: flex; justify-content: center; align-items: center;">
+                    <a href="{{ config('app.url') }}" target="_blank" rel="noopener noreferrer" style="display: flex; justify-content: center; align-items: center;">
 
                         <img class="img logo" src="{{ asset('assets/linkstack/images/'.findFile('avatar')) }}" style="width:auto;height:50px;">
 

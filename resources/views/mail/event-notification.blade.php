@@ -7,8 +7,8 @@ We look forward to your presence at the event.
 
 **In order to mark your attendance as present. Please scan the QR code of your NFC card.**
 
-If you have any questions or encounter any issues, feel free to reach out to us at **admin@tapik.ph**.
+If you have any questions or encounter any issues, feel free to reach out to us.
 
 Best regards,<br>
-Tapik
+{{ config('app.name') }}
 </x-mail::message>

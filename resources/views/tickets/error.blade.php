@@ -50,8 +50,8 @@
             <div class="col-lg-12">
                 <div class="row">
                     <div class="col-sm-12">
-                        <a href="https://tapik.ph/" target="_blank" rel="noopener noreferrer" style="display: flex; justify-content: center; align-items: center;">
-                            <img src="{{ asset('assets/linkstack/images/'.findFile('avatar')) }}" alt="Philtoa Logo" style="max-width: 400px; max-height: 400px;" />
+                        <a href="{{ config('app.url') }}" target="_blank" rel="noopener noreferrer" style="display: flex; justify-content: center; align-items: center;">
+                            <img src="{{ asset('assets/linkstack/images/'.findFile('avatar')) }}" alt="Logo" style="max-width: 400px; max-height: 400px;" />
                         </a>
                         <section class="text-gray-400 ">
                             <div i class="attendance-center">

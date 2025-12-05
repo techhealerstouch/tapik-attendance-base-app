@@ -1,3 +1,4 @@
+<!-- resources/views/food-services/claim-interface.blade.php -->
 @extends('layouts.sidebar')
 
 @section('content')
@@ -7,78 +8,46 @@
                 <div class="card rounded">
                     <div class="card-header">
                         <h4 class="card-title">Food Service Claiming</h4>
+                        <p class="text-muted mb-0"><small><i class="bi bi-info-circle"></i> Select an event to start the claiming process</small></p>
                     </div>
                     <div class="card-body">
                         <!-- Event Selection -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label for="eventSelect" class="form-label">Select Event</label>
-                                <select id="eventSelect" class="form-select">
-                                    <option value="">-- Select Event --</option>
-                                    @foreach($events as $event)
-                                        <option value="{{ $event->id }}">
-                                            {{ $event->title }} ({{ $event->start->format('M d, Y') }})
-                                        </option>
-                                    @endforeach
-                                </select>
+                        <div class="row justify-content-center">
+                            <div class="col-lg-8 col-md-10">
+                                <div class="mb-4">
+                                    <label for="eventSelect" class="form-label fs-5">Select Event</label>
+                                    <select id="eventSelect" class="form-select form-select-lg">
+                                        <option value="">-- Select Event --</option>
+                                        @foreach($events as $event)
+                                            <option value="{{ $event->id }}">
+                                                {{ $event->title }} ({{ $event->start->format('M d, Y') }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <!-- Claiming Interface Button -->
+                                <div class="text-center">
+                                    <button class="btn btn-primary btn-lg px-5" id="openClaimingBtn" disabled>
+                                        <i class="bi bi-box-arrow-up-right"></i> Open Claiming Interface
+                                    </button>
+                                    <p class="text-muted mt-2 small">
+                                        <i class="bi bi-info-circle"></i> This will open the claiming interface in a new tab
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Scanner Interface -->
-                        <div id="scannerSection" style="display: none;">
-                            <div class="row">
-                                <div class="col-md-6 mb-4">
-                                    <label for="userIdentifier" class="form-label">Scan QR/NFC or Enter Reference Code</label>
-                                    <div class="input-group">
-                                        <input type="text" 
-                                               id="userIdentifier" 
-                                               class="form-control form-control-lg" 
-                                               placeholder="Scan or type code..."
-                                               autofocus>
-                                        <button class="btn btn-primary" id="scanBtn">
-                                            <i class="bi bi-search"></i> Scan
-                                        </button>
-                                    </div>
-                                    <small class="text-muted">Press Enter after scanning or typing</small>
-                                </div>
-                            </div>
-
-                            <!-- Alert Messages -->
-                            <div id="alertContainer"></div>
-
-                            <!-- User Info and Food Services -->
-                            <div id="userInfoSection" style="display: none;">
-                                <div class="card bg-light mb-4">
+                        <!-- Optional: Event Details Preview -->
+                        <div id="eventPreview" class="row justify-content-center mt-4" style="display: none;">
+                            <div class="col-lg-8 col-md-10">
+                                <div class="card border-primary">
                                     <div class="card-body">
-                                        <h5 class="card-title">User Information</h5>
-                                        <div class="row">
-                                            <div class="col-md-4">
-                                                <strong>Name:</strong> <span id="userName"></span>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <strong>Email:</strong> <span id="userEmail"></span>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <strong>Reference Code:</strong> <span id="userCode"></span>
-                                            </div>
-                                        </div>
+                                        <h6 class="card-title text-primary">
+                                            <i class="bi bi-calendar-event"></i> Selected Event
+                                        </h6>
+                                        <div id="eventDetails"></div>
                                     </div>
-                                </div>
-
-                                <!-- Food Services List -->
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h5 class="card-title mb-0">Available Food Services</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div id="foodServicesList" class="row g-3"></div>
-                                    </div>
-                                </div>
-
-                                <div class="mt-3">
-                                    <button class="btn btn-secondary" id="resetBtn">
-                                        <i class="bi bi-arrow-clockwise"></i> Scan Another User
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -89,239 +58,52 @@
     </div>
 
     @push('sidebar-scripts')
+     <!-- jQuery (Load this FIRST before any other scripts) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+        
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        
         <script>
-            let currentUserId = null;
-            let currentEventId = null;
-            let foodServices = [];
-
             $(document).ready(function() {
-                // Show scanner when event is selected
+                // Initialize Select2 for event dropdown
+                $('#eventSelect').select2({
+                    theme: 'bootstrap-5',
+                    placeholder: '-- Select Event --',
+                    allowClear: true,
+                    width: '100%'
+                });
+
+                // Enable/disable button and show preview when event is selected
                 $('#eventSelect').change(function() {
-                    currentEventId = $(this).val();
-                    if (currentEventId) {
-                        $('#scannerSection').show();
-                        $('#userIdentifier').focus();
+                    const eventId = $(this).val();
+                    const eventText = $(this).find('option:selected').text();
+                    
+                    if (eventId) {
+                        $('#openClaimingBtn').prop('disabled', false);
+                        $('#eventDetails').html(`
+                            <p class="mb-0"><strong>${eventText}</strong></p>
+                        `);
+                        $('#eventPreview').show();
                     } else {
-                        $('#scannerSection').hide();
-                        resetInterface();
+                        $('#openClaimingBtn').prop('disabled', true);
+                        $('#eventPreview').hide();
                     }
                 });
 
-                // Handle scan button click
-                $('#scanBtn').click(function() {
-                    scanUser();
-                });
-
-                // Handle enter key
-                $('#userIdentifier').keypress(function(e) {
-                    if (e.which === 13) {
-                        scanUser();
+                // Open claiming interface in new tab
+                $('#openClaimingBtn').click(function() {
+                    const eventId = $('#eventSelect').val();
+                    if (eventId) {
+                        const url = '{{ route("food-service.claiming-page") }}?event_id=' + eventId;
+                        window.open(url, '_blank');
                     }
-                });
-
-                // Reset button
-                $('#resetBtn').click(function() {
-                    resetInterface();
                 });
             });
-
-            function scanUser() {
-                const identifier = $('#userIdentifier').val().trim();
-                
-                if (!identifier) {
-                    showAlert('Please enter or scan a code', 'warning');
-                    return;
-                }
-
-                if (!currentEventId) {
-                    showAlert('Please select an event first', 'warning');
-                    return;
-                }
-
-                // Show loading
-                $('#userIdentifier').prop('disabled', true);
-                $('#scanBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Scanning...');
-
-                $.ajax({
-                    url: '{{ route("food-service.scan") }}',
-                    method: 'POST',
-                    data: {
-                        identifier: identifier,
-                        event_id: currentEventId,
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-                        currentUserId = response.user.id;
-                        foodServices = response.food_services;
-                        
-                        displayUserInfo(response.user);
-                        displayFoodServices(response.food_services);
-                        
-                        $('#userInfoSection').show();
-                        showAlert('User found successfully!', 'success');
-                    },
-                    error: function(xhr) {
-                        const error = xhr.responseJSON?.error || 'Error scanning user';
-                        showAlert(error, 'danger');
-                        resetInterface();
-                    },
-                    complete: function() {
-                        $('#userIdentifier').prop('disabled', false);
-                        $('#scanBtn').prop('disabled', false).html('<i class="bi bi-search"></i> Scan');
-                    }
-                });
-            }
-
-            function displayUserInfo(user) {
-                $('#userName').text(user.name);
-                $('#userEmail').text(user.email);
-                $('#userCode').text(user.activate_code || user.rfid_no || 'N/A');
-            }
-
-            function displayFoodServices(services) {
-                const container = $('#foodServicesList');
-                container.empty();
-
-                services.forEach(service => {
-                    const card = $(`
-                        <div class="col-md-4">
-                            <div class="card ${service.is_claimed ? 'border-success' : 'border-primary'}">
-                                <div class="card-body">
-                                    <h6 class="card-title">
-                                        ${service.name}
-                                        ${service.is_claimed ? '<span class="badge bg-success ms-2">Claimed</span>' : ''}
-                                    </h6>
-                                    <p class="card-text small text-muted">${service.description || ''}</p>
-                                    ${service.quantity ? `
-                                        <p class="mb-2 small">
-                                            <strong>Available:</strong> ${service.remaining}/${service.quantity}
-                                        </p>
-                                    ` : ''}
-                                    ${service.serving_start ? `
-                                        <p class="mb-2 small">
-                                            <strong>Time:</strong> ${service.serving_start} - ${service.serving_end}
-                                        </p>
-                                    ` : ''}
-                                    <div class="mt-2">
-                                        ${service.can_claim && !service.is_claimed ? `
-                                            <button class="btn btn-primary btn-sm w-100 claim-btn" 
-                                                    data-service-id="${service.id}"
-                                                    ${service.remaining === 0 ? 'disabled' : ''}>
-                                                <i class="bi bi-check-circle"></i> Claim
-                                            </button>
-                                        ` : service.is_claimed ? `
-                                            <button class="btn btn-danger btn-sm w-100 unclaim-btn" 
-                                                    data-service-id="${service.id}">
-                                                <i class="bi bi-x-circle"></i> Unclaim
-                                            </button>
-                                        ` : `
-                                            <button class="btn btn-secondary btn-sm w-100" disabled>
-                                                Not Available
-                                            </button>
-                                        `}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `);
-                    container.append(card);
-                });
-
-                // Bind claim buttons
-                $('.claim-btn').click(function() {
-                    const serviceId = $(this).data('service-id');
-                    claimService(serviceId, $(this));
-                });
-
-                // Bind unclaim buttons
-                $('.unclaim-btn').click(function() {
-                    const serviceId = $(this).data('service-id');
-                    unclaimService(serviceId, $(this));
-                });
-            }
-
-            function claimService(serviceId, button) {
-                if (!confirm('Confirm claiming this food service?')) {
-                    return;
-                }
-
-                button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Processing...');
-
-                $.ajax({
-                    url: '{{ route("food-service.process-claim") }}',
-                    method: 'POST',
-                    data: {
-                        user_id: currentUserId,
-                        event_id: currentEventId,
-                        food_service_id: serviceId,
-                        claim_method: 'manual',
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-                        showAlert(response.message, 'success');
-                        // Refresh the display
-                        scanUser();
-                    },
-                    error: function(xhr) {
-                        const error = xhr.responseJSON?.error || 'Error claiming service';
-                        showAlert(error, 'danger');
-                        button.prop('disabled', false).html('<i class="bi bi-check-circle"></i> Claim');
-                    }
-                });
-            }
-
-            function unclaimService(serviceId, button) {
-                if (!confirm('Confirm removing this claim?')) {
-                    return;
-                }
-
-                button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Processing...');
-
-                $.ajax({
-                    url: '{{ route("food-service.unclaim") }}',
-                    method: 'POST',
-                    data: {
-                        user_id: currentUserId,
-                        event_id: currentEventId,
-                        food_service_id: serviceId,
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-                        showAlert(response.message, 'success');
-                        // Refresh the display
-                        scanUser();
-                    },
-                    error: function(xhr) {
-                        const error = xhr.responseJSON?.error || 'Error unclaiming service';
-                        showAlert(error, 'danger');
-                        button.prop('disabled', false).html('<i class="bi bi-x-circle"></i> Unclaim');
-                    }
-                });
-            }
-
-            function showAlert(message, type) {
-                const alert = $(`
-                    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                        ${message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `);
-                
-                $('#alertContainer').html(alert);
-                
-                // Auto dismiss after 5 seconds
-                setTimeout(() => {
-                    alert.fadeOut(() => alert.remove());
-                }, 5000);
-            }
-
-            function resetInterface() {
-                currentUserId = null;
-                $('#userIdentifier').val('');
-                $('#userInfoSection').hide();
-                $('#alertContainer').empty();
-                $('#userIdentifier').focus();
-            }
         </script>
     @endpush
 @endsection

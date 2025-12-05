@@ -9,6 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Mail\Mailables\Address;
+use App\Models\EmailTemplate;
 
 class UserInviteMail extends Mailable
 {
@@ -21,6 +22,7 @@ class UserInviteMail extends Mailable
     public $name;
     public $url;
     public $subject;
+    public $dynamicContent;
 
     public function __construct($eventName, $name, $eventStart, $eventEnd, $eventAddress, $url)
     {
@@ -30,7 +32,36 @@ class UserInviteMail extends Mailable
         $this->eventAddress = $eventAddress;
         $this->name = $name;
         $this->url = $url;
-        $this->subject = 'Event Invitation';
+        
+        // Load template from database
+        $template = EmailTemplate::where('name', 'event-invitation')
+            ->where('is_active', true)
+            ->first();
+        
+        if ($template) {
+            // Render subject with variables
+            $this->subject = $template->renderSubject([
+                'name' => $name,
+                'eventName' => $eventName,
+                'eventStart' => $eventStart,
+                'eventEnd' => $eventEnd,
+                'eventAddress' => $eventAddress,
+            ]);
+            
+            // Render content with variables
+            $this->dynamicContent = $template->render([
+                'name' => $name,
+                'eventName' => $eventName,
+                'eventStart' => $eventStart,
+                'eventEnd' => $eventEnd,
+                'eventAddress' => $eventAddress,
+                'appName' => config('app.name')
+            ]);
+        } else {
+            // Fallback if no template exists
+            $this->subject = 'Event Invitation';
+            $this->dynamicContent = $this->getDefaultContent();
+        }
     }
 
     public function envelope()
@@ -47,7 +78,7 @@ class UserInviteMail extends Mailable
     public function content()
     {
         return new Content(
-            markdown: 'mail.event-notification',
+            markdown: 'mail.event-notification-dynamic',
         );
     }
 
@@ -59,7 +90,26 @@ class UserInviteMail extends Mailable
     public function build()
     {
         return $this
-            ->markdown('mail.event-notification')
+            ->markdown('mail.event-notification-dynamic')
             ->subject($this->subject);
+    }
+
+    /**
+     * Get default content if no template exists in database
+     */
+    private function getDefaultContent()
+    {
+        return "# Dear {$this->name},
+
+You are cordially invited to **{$this->eventName}**, scheduled to take place on **{$this->eventStart}** at **{$this->eventAddress}**. <br>
+
+We look forward to your presence at the event.
+
+**In order to mark your attendance as present. Please scan the QR code of your NFC card.**
+
+If you have any questions or encounter any issues, feel free to reach out to us.
+
+Best regards,<br>
+" . config('app.name');
     }
 }

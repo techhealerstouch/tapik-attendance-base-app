@@ -64,4 +64,9 @@ class Event extends Model
             ];
         });
     }
+
+    public function identifierScans()
+{
+    return $this->hasMany(IdentifierScan::class);
+}
 }
