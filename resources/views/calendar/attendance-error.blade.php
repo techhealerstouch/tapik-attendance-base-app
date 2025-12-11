@@ -1,3 +1,4 @@
+<!-- Attendance Error -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -54,25 +55,25 @@
                             <img src="{{ asset('assets/linkstack/images/'.findFile('avatar')) }}" alt="Logo" style="max-width: 400px; max-height: 400px;" />
                         </a>
                         <section class="text-gray-400 ">
-                            <div i class="attendance-center">
+                            <div class="attendance-center">
                                 <h2 class="header-main">
-                                    <i class="fas fa-times mx-2" style="color: red; font-size: 140px;"></i> <!-- Red color, custom size -->
+                                    <i class="fas fa-times mx-2" style="color: red; font-size: 140px;"></i>
                                 </h2>
 
                                 <h2 class="mb-4">
-                                    @if (session('error'))
-                                        {{ session('error') }}
+                                    @if($error)
+                                        {{ $error }}
                                     @else
                                         There seems to be a problem with your ID. Please approach an admin staff.
                                     @endif
                                 </h2>
-                                <!-- this is the scanner component -->
-                            </section>
-                            <form id="attendanceForm" action="/attendance-input" method="POST">
-                                @csrf
-                                <input type="hidden" name="event" value="{{ session('event') }}">
-                            </form>
-                        </div>
+                            </div>
+                        </section>
+                        
+                        <form id="attendanceForm" action="/attendance-input" method="POST">
+                            @csrf
+                            <input type="hidden" name="event" value="{{ $event }}">
+                        </form>
                     </div>
                 </div>
             </div>
@@ -90,22 +91,3 @@
     </script>
 </body>
 </html>
-<style>
-    .attendance-center {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-
-    .body {
-        color: black !important;
-    }
-
-    .header-main{
-        margin-top: 50px;
-    }
-    
-</style>
-
-

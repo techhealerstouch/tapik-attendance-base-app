@@ -1,3 +1,4 @@
+<!-- add.blade.php -->
 @extends('layouts.sidebar')
 
 @section('content')
@@ -422,14 +423,14 @@
                                            data-bs-toggle="tooltip" 
                                            title="Select a group to automatically invite all group members"></i>
                                     </label>
-                                    <select class="form-control select-group" 
-                                            name="group_id" 
-                                            style="width: 100% !important">
-                                        <option value="">Select Group (Optional)</option>
-                                        @foreach ($groups as $group)
-                                            <option value="{{ $group->id }}">{{ $group->name }}</option>
-                                        @endforeach
-                                    </select>
+        <select class="form-control select-groups" 
+                name="group_ids[]" 
+                multiple="multiple" 
+                style="width: 100% !important">
+            @foreach ($groups as $group)
+                <option value="{{ $group->id }}">{{ $group->name }}</option>
+            @endforeach
+        </select>
                                     <small class="form-text">All members of the selected group will be added to the event</small>
                                 </div>
                             </div>
@@ -581,10 +582,10 @@
             });
 
             // Initialize Select2 for groups
-            $('.select-group').select2({
-                placeholder: "Select Group (Optional)",
-                allowClear: true
-            });
+        $('.select-groups').select2({
+            placeholder: "Select one or more groups (Optional)",
+            allowClear: true
+        });
 
             // Initialize Select2 for food services
             $('.select-food-services').select2({

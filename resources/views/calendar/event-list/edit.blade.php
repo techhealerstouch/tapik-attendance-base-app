@@ -1,3 +1,4 @@
+<!-- edit.blade.php -->
 @extends('layouts.sidebar')
 
 @section('content')
@@ -458,31 +459,32 @@
 
                             <!-- Participants Section -->
                             <div class="section-header">
-                                <i class="bi bi-people"></i>
-                                <h5>Participants</h5>
-                            </div>
+    <i class="bi bi-people"></i>
+    <h5>Participants</h5>
+</div>
 
-                            <div class="row">
-                                <div class="form-group col-md-12 mb-3">
-                                    <label for="group_id" class="form-label">
-                                        Group
-                                        <i class="bi bi-question-circle tooltip-icon" 
-                                           data-bs-toggle="tooltip" 
-                                           title="Select a group to automatically invite all group members"></i>
-                                    </label>
-                                    <select class="form-control select-group" 
-                                            name="group_id" 
-                                            style="width: 100% !important">
-                                        <option value="">Select Group (Optional)</option>
-                                        @foreach ($groups as $group)
-                                            <option value="{{ $group->id }}" @selected($group->id == $group_id)>
-                                                {{ $group->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <small class="form-text">All members of the selected group will be added to the event</small>
-                                </div>
-                            </div>
+<div class="row">
+    <div class="col-md-12 mb-3">
+        <label for="group_ids" class="form-label">
+            Groups
+            <i class="bi bi-question-circle tooltip-icon" 
+               data-bs-toggle="tooltip" 
+               title="Select one or more groups to automatically invite all their members"></i>
+        </label>
+        <select class="form-control select-groups" 
+                name="group_ids[]" 
+                multiple="multiple" 
+                style="width: 100% !important">
+            @foreach ($groups as $group)
+                <option value="{{ $group->id }}" @if(in_array($group->id, $group_ids)) selected @endif>
+                    {{ $group->name }}
+                </option>
+            @endforeach
+        </select>
+        <small class="form-text">All members of the selected groups will be added to the event</small>
+    </div>
+</div>
+
                             
                             <div class="row">
                                 <div class="col-md-12 mb-4">
@@ -650,88 +652,88 @@
     <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        $(document).ready(function() {
-            // Initialize tooltips
-            $('[data-bs-toggle="tooltip"]').tooltip();
+         $(document).ready(function() {
+        // Initialize tooltips
+        $('[data-bs-toggle="tooltip"]').tooltip();
 
-            // Initialize Select2 for members
-            $('.select-members').select2({
-                placeholder: "Select members/users to invite",
-                allowClear: true
-            });
-
-            // Initialize Select2 for groups
-            $('.select-group').select2({
-                placeholder: "Select Group (Optional)",
-                allowClear: true
-            });
-
-            // Initialize Select2 for food services
-            $('.select-food-services').select2({
-                placeholder: "Select food services for this event",
-                allowClear: true
-            });
-
-            // Food service quantities data from server
-            const existingQuantities = @json($foodServiceQuantities ?? []);
-
-            // Food services selection handler
-            function updateFoodServiceQuantities() {
-                const selectedServices = $('.select-food-services').val();
-                const $quantitiesSection = $('#foodServiceQuantities');
-                const $quantityInputs = $('#quantityInputs');
-
-                if (selectedServices && selectedServices.length > 0) {
-                    $quantitiesSection.show();
-                    $quantityInputs.empty();
-
-                    selectedServices.forEach(serviceId => {
-                        const serviceName = $('.select-food-services').find(`option[value="${serviceId}"]`).text();
-                        const existingQty = existingQuantities[serviceId] || '';
-                        
-                        const inputHtml = `
-                            <div class="row mb-3 align-items-center">
-                                <div class="col-md-6">
-                                    <label class="form-label mb-0">${serviceName}</label>
-                                </div>
-                                <div class="col-md-6">
-                                    <input type="number" 
-                                           name="food_service_quantities[${serviceId}]" 
-                                           class="form-control" 
-                                           placeholder="Unlimited"
-                                           value="${existingQty}"
-                                           min="0">
-                                </div>
-                            </div>
-                        `;
-                        $quantityInputs.append(inputHtml);
-                    });
-                } else {
-                    $quantitiesSection.hide();
-                    $quantityInputs.empty();
-                }
-            }
-
-            // Initial load
-            updateFoodServiceQuantities();
-
-            // On change
-            $('.select-food-services').on('change', updateFoodServiceQuantities);
-
-            // Date validation
-            $('#start').on('change', function() {
-                $('#end').attr('min', $(this).val());
-            });
-
-            $('#end').on('change', function() {
-                const startDate = new Date($('#start').val());
-                const endDate = new Date($(this).val());
-                
-                if (endDate < startDate) {
-                    alert('End date cannot be before start date');
-                    $(this).val('');
-                }
-            });
+        // Initialize Select2 for groups - SAME AS select-members
+        $('.select-groups').select2({
+            placeholder: "Select one or more groups (Optional)",
+            allowClear: true
         });
+
+        // Initialize Select2 for members
+        $('.select-members').select2({
+            placeholder: "Select members/users to invite",
+            allowClear: true
+        });
+
+        // Initialize Select2 for food services
+        $('.select-food-services').select2({
+            placeholder: "Select food services for this event",
+            allowClear: true
+        });
+
+        // Food service quantities data from server
+        const existingQuantities = @json($foodServiceQuantities ?? []);
+
+        // Food services selection handler
+        function updateFoodServiceQuantities() {
+            const selectedServices = $('.select-food-services').val();
+            const $quantitiesSection = $('#foodServiceQuantities');
+            const $quantityInputs = $('#quantityInputs');
+
+            if (selectedServices && selectedServices.length > 0) {
+                $quantitiesSection.show();
+                $quantityInputs.empty();
+
+                selectedServices.forEach(serviceId => {
+                    const serviceName = $('.select-food-services').find(`option[value="${serviceId}"]`).text();
+                    const existingQty = existingQuantities[serviceId] || '';
+                    
+                    const inputHtml = `
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-md-6">
+                                <label class="form-label mb-0">${serviceName}</label>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="number" 
+                                       name="food_service_quantities[${serviceId}]" 
+                                       class="form-control" 
+                                       placeholder="Unlimited"
+                                       value="${existingQty}"
+                                       min="0">
+                            </div>
+                        </div>
+                    `;
+                    $quantityInputs.append(inputHtml);
+                });
+            } else {
+                $quantitiesSection.hide();
+                $quantityInputs.empty();
+            }
+        }
+
+        // Initial load
+        updateFoodServiceQuantities();
+
+        // On change
+        $('.select-food-services').on('change', updateFoodServiceQuantities);
+
+        // Date validation
+        $('#start').on('change', function() {
+            $('#end').attr('min', $(this).val());
+        });
+
+        $('#end').on('change', function() {
+            const startDate = new Date($('#start').val());
+            const endDate = new Date($(this).val());
+            
+            if (endDate < startDate) {
+                alert('End date cannot be before start date');
+                $(this).val('');
+            }
+        });
+    });
     </script>
 @endsection

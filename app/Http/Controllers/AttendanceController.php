@@ -41,67 +41,67 @@ class AttendanceController extends Controller
     }
 
     public function get_live_user(Request $request, $eventId)
-{
-    try {
-        // Get the limit from request, default to 10
-        $limit = $request->input('limit', 10);
-        
-        // Validate limit to prevent abuse
-        $limit = in_array($limit, [10, 100, 500]) ? $limit : 10;
-        
-        if ($eventId === 'all') {
-            $attendances = Attendance::with('user', 'event')
-                ->where('status', 'Present')
-                ->orderBy('time_in', 'desc')
-                ->limit($limit)
-                ->get();
+    {
+        try {
+            // Get the limit from request, default to 10
+            $limit = $request->input('limit', 10);
+            
+            // Validate limit to prevent abuse
+            $limit = in_array($limit, [10, 100, 500]) ? $limit : 10;
+            
+            if ($eventId === 'all') {
+                $attendances = Attendance::with('user', 'event')
+                    ->where('status', 'Present')
+                    ->orderBy('time_in', 'desc')
+                    ->limit($limit)
+                    ->get();
 
-            $ticketGuests = TicketGuest::with('ticket.event')
-                ->where('is_scanned', 1)
-                ->orderBy('updated_at', 'desc')
-                ->limit($limit)
-                ->get();
-                
-            // Get total count for all events
-            $totalMembers = Attendance::where('status', 'Present')->count();
-        } else {
-            $attendances = Attendance::with('user', 'event')
-                ->where('status', 'Present')
-                ->where('event_id', $eventId)
-                ->orderBy('time_in', 'desc')
-                ->limit($limit)
-                ->get();
-
-            $ticket = Ticket::where('event_id', $eventId)->first();
-
-            if ($ticket) {
                 $ticketGuests = TicketGuest::with('ticket.event')
                     ->where('is_scanned', 1)
-                    ->where('ticket_id', $ticket->id)
                     ->orderBy('updated_at', 'desc')
                     ->limit($limit)
                     ->get();
+                    
+                // Get total count for all events
+                $totalMembers = Attendance::where('status', 'Present')->count();
             } else {
-                $ticketGuests = collect(); // Empty collection
+                $attendances = Attendance::with('user', 'event')
+                    ->where('status', 'Present')
+                    ->where('event_id', $eventId)
+                    ->orderBy('time_in', 'desc')
+                    ->limit($limit)
+                    ->get();
+
+                $ticket = Ticket::where('event_id', $eventId)->first();
+
+                if ($ticket) {
+                    $ticketGuests = TicketGuest::with('ticket.event')
+                        ->where('is_scanned', 1)
+                        ->where('ticket_id', $ticket->id)
+                        ->orderBy('updated_at', 'desc')
+                        ->limit($limit)
+                        ->get();
+                } else {
+                    $ticketGuests = collect(); // Empty collection
+                }
+                
+                // Get total count for this specific event
+                $totalMembers = Attendance::where('event_id', $eventId)
+                    ->where('status', 'Present')
+                    ->count();
             }
-            
-            // Get total count for this specific event
-            $totalMembers = Attendance::where('event_id', $eventId)
-                ->where('status', 'Present')
-                ->count();
+
+            return response()->json([
+                'attendances' => $attendances,
+                'ticketGuests' => $ticketGuests,
+                'totalMembers' => $totalMembers,
+                'limit' => $limit
+            ]);
+
+        } catch (\Throwable $th) {
+            return response()->json(['error' => $th->getMessage()], 500);
         }
-
-        return response()->json([
-            'attendances' => $attendances,
-            'ticketGuests' => $ticketGuests,
-            'totalMembers' => $totalMembers,
-            'limit' => $limit
-        ]);
-
-    } catch (\Throwable $th) {
-        return response()->json(['error' => $th->getMessage()], 500);
     }
-}
 
     /**
      * Fetch attendance records for a specific event
@@ -204,40 +204,253 @@ class AttendanceController extends Controller
         return redirect()->back()->with('success', 'Attendance recorded successfully.');
     }
 
-    public function attendance_input(Request $request)
+    public function scanProcess(Request $request)
     {
-        $event = $request->event;
-        
-        $eventDetails = Event::where('title', $event)->first();
+        try {
+            $identifier = $request->input('identifier');
+            $eventId = $request->input('event_id');
 
-        if (!$eventDetails) {
-            return redirect()->back()->with('error', 'Event not found.');
+            // Find event
+            $event = Event::find($eventId);
+            if (!$event) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Event not found.',
+                    'redirect' => false
+                ]);
+            }
+
+            // Check if it's a URL
+            if (filter_var($identifier, FILTER_VALIDATE_URL)) {
+                $userCode = basename($identifier);
+                $user = User::where('activate_code', $userCode)
+                    ->orWhere('id', $userCode)
+                    ->first();
+
+                if (!$user) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'User not found. Please contact admin/helpdesk.',
+                        'redirect' => true
+                    ]);
+                }
+
+                $attendance = Attendance::where('user_id', $user->id)
+                    ->where('event_id', $event->id)
+                    ->first();
+
+                if (!$attendance) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'You are not part of the event. Please contact support.',
+                        'redirect' => true
+                    ]);
+                }
+
+                if ($attendance->status === 'Present') {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'You have already submitted attendance for this event.',
+                        'redirect' => true
+                    ]);
+                }
+
+                return response()->json([
+                    'status' => 'success',
+                    'data' => [
+                        'user_id' => $user->id,
+                        'attendance_id' => $attendance->id,
+                        'representative' => $user->representative,
+                        'user_name' => $user->name
+                    ]
+                ]);
+            }
+            // Check if it's a ticket
+            elseif (substr($identifier, 0, 3) === 'TCK') {
+                $ticketGuest = TicketGuest::where('ticket_no', $identifier)->first();
+                
+                if (!$ticketGuest) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Ticket not found.',
+                        'redirect' => true
+                    ]);
+                }
+
+                $ticketList = Ticket::where('id', $ticketGuest->ticket_id)->first();
+
+                if ($ticketList->event_id !== (int) $event->id) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Your ticket is not part of this event.',
+                        'redirect' => true
+                    ]);
+                }
+
+                if ($ticketGuest->is_scanned) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'You are already checked in.',
+                        'redirect' => true
+                    ]);
+                }
+
+                // Mark ticket as scanned
+                $ticketGuest->is_scanned = 1;
+                $ticketGuest->save();
+
+                return response()->json([
+                    'status' => 'success',
+                    'data' => [
+                        'type' => 'ticket',
+                        'message' => 'Ticket scanned successfully!',
+                        'redirect' => true
+                    ]
+                ]);
+            }
+            // Regular RFID
+            else {
+                $user = User::where('rfid_no', $identifier)->first();
+
+                if (!$user) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'User not found. Please contact admin/helpdesk.',
+                        'redirect' => true
+                    ]);
+                }
+
+                $attendance = Attendance::where('user_id', $user->id)
+                    ->where('event_id', $event->id)
+                    ->first();
+
+                if (!$attendance) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'You are not part of the event. Please contact support.',
+                        'redirect' => true
+                    ]);
+                }
+
+                if ($attendance->status === 'Present') {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'You have already submitted attendance for this event.',
+                        'redirect' => true
+                    ]);
+                }
+
+                return response()->json([
+                    'status' => 'success',
+                    'data' => [
+                        'user_id' => $user->id,
+                        'attendance_id' => $attendance->id,
+                        'representative' => $user->representative,
+                        'user_name' => $user->name
+                    ]
+                ]);
+            }
+        } catch (\Throwable $th) {
+            Log::error('Error in scanProcess: ' . $th->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong. Please try again.',
+                'redirect' => true
+            ]);
         }
-
-        $startDate = \DateTime::createFromFormat('Y-m-d H:i:s', $eventDetails->start);
-        $endDate = \DateTime::createFromFormat('Y-m-d H:i:s', $eventDetails->end);
-
-        if ($startDate === false) {
-            return redirect()->back()->with('error', 'Invalid event start date format.');
-        }
-
-        if ($endDate === false) {
-            return redirect()->back()->with('error', 'Invalid event end date format.');
-        }
-
-        $formattedStart = $startDate->format('F d, Y');
-        $formattedEnd = $endDate->format('F d, Y');
-
-        $data = [
-            'event' => $event,
-            'event_id' => $eventDetails->id,
-            'start' => $formattedStart,
-            'end' => $formattedEnd,
-            'address' => $eventDetails->address,
-        ];
-
-        return view('calendar.attendance-input', $data);
     }
+
+    /**
+     * Submit attendance with representative
+     */
+    public function submitAttendance(Request $request)
+    {
+        try {
+            $userId = $request->input('user_id');
+            $attendanceId = $request->input('attendance_id');
+            $representative = $request->input('representative');
+            $updateUserRep = $request->input('update_user_rep', 0);
+
+            $attendance = Attendance::find($attendanceId);
+            
+            if (!$attendance) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Attendance record not found.',
+                    'redirect' => true
+                ]);
+            }
+
+            // Get user details
+            $user = User::find($userId);
+            $event = Event::find($attendance->event_id);
+
+            // Update attendance
+            $attendance->time_in = now();
+            $attendance->status = 'Present';
+            $attendance->rep_by = $representative;
+            $attendance->save();
+
+            // Update user representative if needed
+            if ($updateUserRep && $user) {
+                $user->representative = $representative;
+                $user->save();
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Attendance marked successfully!',
+                'redirect' => true,
+                'data' => [
+                    'name' => $user ? $user->name : null,
+                    'event' => $event ? $event->title : $attendance->event_name
+                ]
+            ]);
+        } catch (\Throwable $th) {
+            Log::error('Error in submitAttendance: ' . $th->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error submitting attendance. Please try again.',
+                'redirect' => true
+            ]);
+        }
+    }
+
+public function attendance_input(Request $request)
+{
+    $event = $request->event;
+    
+    $eventDetails = Event::where('title', $event)->first();
+
+    if (!$eventDetails) {
+        return redirect()->back()->with('error', 'Event not found.');
+    }
+
+    $startDate = \DateTime::createFromFormat('Y-m-d H:i:s', $eventDetails->start);
+    $endDate = \DateTime::createFromFormat('Y-m-d H:i:s', $eventDetails->end);
+
+    if ($startDate === false) {
+        return redirect()->back()->with('error', 'Invalid event start date format.');
+    }
+
+    if ($endDate === false) {
+        return redirect()->back()->with('error', 'Invalid event end date format.');
+    }
+
+    $formattedStart = $startDate->format('F d, Y');
+    $formattedEnd = $endDate->format('F d, Y');
+
+    $data = [
+        'event' => $event,
+        'event_id' => $eventDetails->id,
+        'start' => $formattedStart,
+        'end' => $formattedEnd,
+        'address' => $eventDetails->address,
+        'enable_rep_prompt' => $request->input('enable_rep_prompt', 0),
+    ];
+
+    return view('calendar.attendance-input', $data);
+}
 
     public function deleteAttendance($id)
     {
@@ -255,5 +468,33 @@ class AttendanceController extends Controller
                 'message' => 'Error deleting attendance: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Show success page
+     */
+    public function showSuccess(Request $request)
+    {
+        $name = $request->input('name');
+        $event = $request->input('event');
+        
+        return view('calendar.attendance-success')->with([
+            'name' => $name,
+            'event' => $event
+        ]);
+    }
+
+    /**
+     * Show error page
+     */
+    public function showError(Request $request)
+    {
+        $error = $request->input('error');
+        $event = $request->input('event');
+        
+        return view('calendar.attendance-error')->with([
+            'error' => $error,
+            'event' => $event
+        ]);
     }
 }

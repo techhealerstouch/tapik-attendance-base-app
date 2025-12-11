@@ -1,4 +1,4 @@
-<!-- Attendance Page -->
+<!-- Updated Attendance Management Page -->
 @extends('layouts.sidebar')
 
 @section('content')
@@ -30,14 +30,6 @@
                     </p>
                 </div>
                 <div class="card-body">
-                    <!-- Breadcrumb -->
-                    <!-- <div class="col-sm-12 mb-3">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="/dashboard">Home</a></li>
-                            <li class="breadcrumb-item active">Attendance</li>
-                        </ol>
-                    </div> -->
-
                     <!-- Event Selection Row -->
                     <div class="row mb-4">
                         <!-- Left Column: Event Selection -->
@@ -53,7 +45,7 @@
 
                         <!-- Right Column: Action Buttons -->
                         <div class="col-lg-6 col-md-12 d-flex align-items-end gap-2">
-                            <button type="button" id="attendancePageBtn" class="btn btn-primary flex-fill" onclick="openAttendancePage()" disabled>
+                            <button type="button" id="attendancePageBtn" class="btn btn-primary flex-fill" onclick="showRepresentativeModal()" disabled>
                                 <i class="bi bi-qr-code-scan"></i> Attendance Page
                             </button>
                             <a href="/attendance/live-preview" class="btn btn-danger flex-fill">
@@ -65,17 +57,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- Export Button Row -->
-                    <!-- <div class="row mb-3">
-                        <div class="col-12">
-                            <div class="d-flex justify-content-end">
-                                <button type="button" class="btn btn-outline-success" onclick="exportToExcel()">
-                                    <i class="bi bi-file-earmark-excel"></i> Export Excel
-                                </button>
-                            </div>
-                        </div>
-                    </div> -->
 
                     <!-- Attendance Table -->
                     <div class="table-responsive">
@@ -103,6 +84,33 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Representative Prompt Modal -->
+<div class="modal fade" id="representativePromptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Representative Prompt</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="bi bi-question-circle text-primary" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">Enable Representative Prompt?</h5>
+                <p class="text-muted">
+                    Do you want attendees to confirm their representative after scanning?
+                </p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-success px-4" onclick="openAttendancePage(true)">
+                    <i class="bi bi-check-circle"></i> Yes
+                </button>
+                <button type="button" class="btn btn-secondary px-4" onclick="openAttendancePage(false)">
+                    <i class="bi bi-x-circle"></i> No
+                </button>
             </div>
         </div>
     </div>
@@ -272,14 +280,6 @@
     // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', function() {
         console.log('DOM loaded, jQuery version:', $.fn.jquery);
-        
-        // Check if Select2 is available
-        if (typeof $.fn.select2 === 'undefined') {
-            console.error('Select2 not loaded!');
-            return;
-        }
-        
-        console.log('Select2 is available');
         
         // Initialize Select2 for event dropdown
         try {
@@ -508,6 +508,59 @@
         `);
     }
 
+    // Show representative prompt modal
+    window.showRepresentativeModal = function() {
+        if (!currentSelectedEvent || currentSelectedEvent === '') {
+            alert('Please select an event first');
+            return;
+        }
+        
+        $('#representativePromptModal').modal('show');
+    };
+
+    // Open Attendance Page function with representative prompt option
+    window.openAttendancePage = function(enablePrompt) {
+        if (!currentSelectedEvent || currentSelectedEvent === '') {
+            alert('Please select an event first');
+            return;
+        }
+        
+        // Hide the modal
+        $('#representativePromptModal').modal('hide');
+        
+        // Create a form and submit it to open in new tab
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route("attendance.page") }}';
+        form.target = '_blank';
+        
+        // Add CSRF token
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = '{{ csrf_token() }}';
+        form.appendChild(csrfInput);
+        
+        // Add event name
+        const eventInput = document.createElement('input');
+        eventInput.type = 'hidden';
+        eventInput.name = 'event';
+        eventInput.value = currentSelectedEvent;
+        form.appendChild(eventInput);
+        
+        // Add representative prompt flag
+        const repPromptInput = document.createElement('input');
+        repPromptInput.type = 'hidden';
+        repPromptInput.name = 'enable_rep_prompt';
+        repPromptInput.value = enablePrompt ? '1' : '0';
+        form.appendChild(repPromptInput);
+        
+        // Submit the form
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    };
+
     // Export to Excel function - make it global
     window.exportToExcel = function() {
         if (!currentSelectedEvent) {
@@ -544,39 +597,6 @@
     window.loadAttendanceData = loadAttendanceData;
     window.displayAttendanceData = displayAttendanceData;
     window.showNoEventSelected = showNoEventSelected;
-    
-    // Open Attendance Page function
-    window.openAttendancePage = function() {
-        if (!currentSelectedEvent || currentSelectedEvent === '') {
-            alert('Please select an event first');
-            return;
-        }
-        
-        // Create a form and submit it to open in new tab
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{{ route("attendance.page") }}';
-        form.target = '_blank';
-        
-        // Add CSRF token
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = '_token';
-        csrfInput.value = '{{ csrf_token() }}';
-        form.appendChild(csrfInput);
-        
-        // Add event name
-        const eventInput = document.createElement('input');
-        eventInput.type = 'hidden';
-        eventInput.name = 'event';
-        eventInput.value = currentSelectedEvent;
-        form.appendChild(eventInput);
-        
-        // Submit the form
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-    };
 })();
 </script>
 @endpush

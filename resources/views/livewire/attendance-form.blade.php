@@ -1,3 +1,4 @@
+<!-- Livewire attendance-form -->
 <div>
     <input wire:model="rfid_no" placeholder="" type='text' name="rfid_no" class='form-control' autofocus 
         style="border: none; outline: none; box-shadow: none; color: transparent; caret-color: transparent; background-color: transparent; -webkit-text-fill-color: transparent;" />

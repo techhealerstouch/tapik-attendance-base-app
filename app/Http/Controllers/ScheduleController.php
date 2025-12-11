@@ -22,11 +22,10 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Queue;
 
 class ScheduleController extends Controller
 {
-    //
     public function index()
     {
         return view('calendar.event-calendar');
@@ -35,20 +34,18 @@ class ScheduleController extends Controller
     public function index_list()
     {
         $groups = Group::all();
-        $events = Event::all();
+        $events = Event::with('groups')->get(); // Eager load groups
         return view('calendar.datatable.index', compact('events'));
     }
 
-public function create_event()
-{
-        $groups = Group::where('is_active', 1)->get();  // Fetch only active groups
-        $users = User::where('activate_status', 'activated')->get();  // Fetch all users
-    
-    // ADD THIS LINE
-    $foodServices = FoodService::orderBy('order')->get();
-    
-    return view('calendar.add', compact('groups', 'users', 'foodServices'));
-}
+    public function create_event()
+    {
+        $groups = Group::where('is_active', 1)->get();
+        $users = User::where('activate_status', 'activated')->get();
+        $foodServices = FoodService::orderBy('order')->get();
+        
+        return view('calendar.add', compact('groups', 'users', 'foodServices'));
+    }
 
     public function create(Request $request)
     {
@@ -64,133 +61,86 @@ public function create_event()
         return redirect('/event-calendar');
     }
 
-    private function sendNotificationMail($userIds, $event, $sendMailCheck)
+    private function sendNotificationMail($userIds, $event, $sendMailCheck, $groupIds = [])
     {
         try {
+            // Remove duplicates from userIds
+            $userIds = array_unique($userIds);
+            
+            // Batch insert attendances first
+            $attendanceData = [];
+            
+            // Fetch all users in batch
+            $users = User::whereIn('id', $userIds)->get()->keyBy('id');
+            
+            // Fetch group users for the selected groups
+            $groupUsers = [];
+            if (!empty($groupIds)) {
+                $groupUsers = GroupUser::whereIn('user_id', $userIds)
+                    ->whereIn('group_id', $groupIds)
+                    ->get()
+                    ->groupBy('user_id');
+            }
+            
             foreach ($userIds as $userId) {
-                $user = User::where('id', $userId)->first();
+                $user = $users->get($userId);
+                
                 if (!$user) {
                     Log::warning("User {$userId} not found, skipping.");
                     continue;
                 }
-                // Check if the user has a group_id
-                $groupUser = GroupUser::where('user_id', $userId)->first();
-                $groupId = $groupUser ? $groupUser->group_id : null;
-                $url = url('/ticket');
-                $eventName = $event->title;
-                $eventStart = Carbon::parse($event->start)->format('F j, Y g:i A');
-                $eventEnd = $event->end;
-                $eventAddress = $event->address;
-                $name = $user->name;
-                $toEmail = $user->email;
-
-                if (!$toEmail) {
-                    Log::warning("User {$user->id} has no email, skipping mail.");
+                
+                // Check if attendance already exists for this user and event
+                $existingAttendance = Attendance::where('event_id', $event->id)
+                    ->where('user_id', $userId)
+                    ->first();
+                
+                if ($existingAttendance) {
+                    Log::info("Attendance already exists for user {$userId} in event {$event->id}, skipping.");
                     continue;
                 }
-
-                try {
-                    Attendance::create([
-                        'user_id' => $user->id,
-                        'group_id' => $groupId ?? null,
-                        'event_id' => $event->id,
-                        'event_name' => $event->title,
-                        'time_in' => null,
-                        'status' => 'Pending'
-                    ]);
-                    Log::info('Attendance created successfully');
-                } catch (\Exception $e) {
-                    Log::error('Error creating attendance: ' . $e->getMessage());
-                    // Optionally continue or skip this user
-                    continue;
+                
+                // Get the first group_id for this user (if they're in multiple groups, pick one)
+                $groupId = null;
+                if (isset($groupUsers[$userId]) && $groupUsers[$userId]->isNotEmpty()) {
+                    $groupId = $groupUsers[$userId]->first()->group_id;
                 }
-
+                
+                // Prepare attendance data for batch insert
+                $attendanceData[] = [
+                    'user_id' => $user->id,
+                    'group_id' => $groupId,
+                    'event_id' => $event->id,
+                    'event_name' => $event->title,
+                    'time_in' => null,
+                    'status' => 'Pending',
+                    'email_sent' => ($sendMailCheck == 1) ? false : true,
+                    'email_sent_at' => ($sendMailCheck == 1) ? null : now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+            
+            // Batch insert all attendances at once
+            if (!empty($attendanceData)) {
+                Attendance::insert($attendanceData);
+                Log::info('Batch attendance created successfully for ' . count($attendanceData) . ' users');
+                
                 if ($sendMailCheck == 1) {
-                    // $redirectURL = url('/u/' . $user->id);
-                    // //$publicURL = url('/' . $user->activate_code);
-                    // ini_set('memory_limit', '256M');
-                    // $argValues = [0, 0, 0, 0, 0, 0, 'diagonal'];
-                    // list($arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $arg7) = $argValues;
-
-                    // // Generate QR code
-                    // if (extension_loaded('imagick')) {
-                    //     $imgSrc = QrCode::format('png')
-                    //         ->gradient($arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $arg7)
-                    //         ->eye('circle')
-                    //         ->style('round')
-                    //         ->size(300)
-                    //         ->generate($redirectURL);
-                    //     $imgSrc = base64_encode($imgSrc);
-                    //     $imgSrc = 'data:image/png;base64,' . $imgSrc;
-                    // } else {
-                    //     $imgSrc = QrCode::gradient($arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $arg7)
-                    //         ->eye('circle')
-                    //         ->style('round')
-                    //         ->size(300)
-                    //         ->generate($redirectURL);
-                    //     $imgSrc = base64_encode($imgSrc);
-                    //     $imgSrc = 'data:image/svg+xml;base64,' . $imgSrc;
-                    // }
-
-                    // $pdfData = [
-                    //     'name' => $user->name,
-                    //     'event_name' => $eventName,
-                    //     'qr_code' => $imgSrc,
-                    // ];
-
-                    // $pdf = Pdf::loadView('calendar.pdf.qr-pdf', ['data' => $pdfData]);
-                    // $filePath = storage_path('app/public/event_ticket_' . $user->id . '.pdf');
-                    // $pdf->save($filePath); // Save each user's PDF separately
-
-                    // Send mail with the correct attachment
-                    try {
-                        // Mail::to($toEmail)->send(new InviteMail(
-                        //     $eventName,
-                        //     $name,
-                        //     $eventStart,
-                        //     $eventEnd,
-                        //     $eventAddress,
-                        //     $url,
-                        //     $filePath, // Attach correct QR PDF
-                        //     "QR Code: " . $user->name
-                        // ));
-
-                        Log::info("Sending UserInviteMail with the following data:", [
-                            'to_email' => $toEmail,
-                            'event_name' => $eventName,
-                            'recipient_name' => $name,
-                            'event_start' => $eventStart,
-                            'event_end' => $eventEnd,
-                            'event_address' => $eventAddress,
-                            'event_url' => $url
-                        ]);
-
-                        Mail::to($toEmail)->send(new UserInviteMail(
-                            $eventName,
-                            $name,
-                            $eventStart,
-                            $eventEnd,
-                            $eventAddress,
-                            $url
-                        ));
-                    } catch (\Throwable $th) {
-                        Log::error('Error sending invite email to ' . $toEmail . ': ' . $th->getMessage());
-                    }
+                    Log::info('Emails will be sent via cron job. Check logs for progress.');
                 }
             }
-        } catch (RequestException $e) {
-            Log::error('Error creating attendance record: ' . $e->getMessage());
-            Log::error('Response: ' . $e->getResponse()->getBody()->getContents());
+            
+        } catch (\Exception $e) {
+            Log::error('Error in sendNotificationMail: ' . $e->getMessage());
             return ['error' => $e->getMessage()];
         }
     }
 
-
-
-public function store(Request $request)
+    public function store(Request $request)
     {
         $sendMailCheck = $request->send_mail ?? 0;
-        Log::info($sendMailCheck);
+        Log::info('Store method - send_mail value:', ['value' => $sendMailCheck]);
         
         // Create a new Event
         $item = new Event();
@@ -199,116 +149,182 @@ public function store(Request $request)
         $item->start = $request->start;
         $item->end = $request->end;
         $item->description = $request->description;
-        $item->group_id = $request->group_id;
         $item->color = '#052884';
         $item->save();
 
-        // Attach Food Services to Event
+        // Attach Groups to Event using the pivot table
+        if ($request->has('group_ids') && is_array($request->group_ids)) {
+            $groupIds = array_filter($request->group_ids, function($id) {
+                return !empty($id);
+            });
+            
+            if (!empty($groupIds)) {
+                $item->groups()->attach($groupIds);
+                Log::info('Attached groups to event:', ['event_id' => $item->id, 'group_ids' => $groupIds]);
+            }
+        }
+
+        // Attach Food Services to Event - batch insert
         if ($request->has('food_service_ids') && is_array($request->food_service_ids)) {
+            $foodServiceData = [];
             foreach ($request->food_service_ids as $foodServiceId) {
                 $quantity = $request->input("food_service_quantities.{$foodServiceId}");
                 
-                DB::table('event_food_services')->insert([
+                $foodServiceData[] = [
                     'event_id' => $item->id,
                     'food_service_id' => $foodServiceId,
                     'quantity' => $quantity ?: null,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]);
+                ];
+            }
+            
+            if (!empty($foodServiceData)) {
+                DB::table('event_food_services')->insert($foodServiceData);
             }
         }
 
-        // Fetch the group_id and existing userIds for the group
-        $groupId = $request->input('group_id');
-        $existingUserIds = GroupUser::where('group_id', $groupId)->pluck('user_id')->toArray();
+        // Fetch users from ALL selected groups
+        $groupIds = $request->input('group_ids', []);
+        $existingUserIds = [];
+        
+        if (!empty($groupIds)) {
+            $existingUserIds = GroupUser::whereIn('group_id', $groupIds)
+                ->pluck('user_id')
+                ->unique()
+                ->toArray();
+        }
 
         // Fetch userIds from the request
         $newUserIds = $request->input('userId', []);
 
-        // Filter out userIds already in the group
-        $userIdsToAdd = array_diff($newUserIds, $existingUserIds);
-
-        // Send notification to all users (existing and newly added)
-        $allUserIds = array_merge($existingUserIds, $userIdsToAdd);
+        // Combine and remove duplicates
+        $allUserIds = array_unique(array_merge($existingUserIds, $newUserIds));
+        
+        // IMPORTANT: For large groups, limit email sending or split into batches
+        if (count($allUserIds) > 200) {
+            Log::warning("Large group detected (" . count($allUserIds) . " users). Consider splitting email sending.");
+        }
+        
+        Log::info('User IDs summary:', [
+            'from_groups' => count($existingUserIds),
+            'manually_added' => count($newUserIds),
+            'total_unique' => count($allUserIds)
+        ]);
+        
         $event = Event::where('id', $item->id)->first();
+        
         if ($allUserIds) {
-            $this->sendNotificationMail($allUserIds, $event, $sendMailCheck);
+            $this->sendNotificationMail($allUserIds, $event, $sendMailCheck, $groupIds);
         }
 
-        return redirect()->route('events.index_list')->with('success', 'Event added successfully with food services.');
+        return redirect()->route('events.index_list')->with('success', 'Event added successfully. Check logs for email sending status.');
     }
 
-public function edit($id)
-{
-    $event = Event::with(['foodServices'])->findOrFail($id);
-    $groups = Group::all();
-    $users = User::all();
-    
-    // Get all food services
-    $foodServices = FoodService::orderBy('order')->get();
-    
-    // Get selected food service IDs
-    $selectedFoodServices = $event->foodServices->pluck('id')->toArray();
-    
-    // Get food service quantities
-    $foodServiceQuantities = [];
-    foreach ($event->foodServices as $service) {
-        $foodServiceQuantities[$service->id] = $service->pivot->quantity;
+    public function edit($id)
+    {
+        $event = Event::with(['foodServices', 'groups'])->findOrFail($id);
+        $groups = Group::all();
+        $users = User::all();
+        
+        // Get all food services
+        $foodServices = FoodService::orderBy('order')->get();
+        
+        // Get selected food service IDs
+        $selectedFoodServices = $event->foodServices->pluck('id')->toArray();
+        
+        // Get food service quantities
+        $foodServiceQuantities = [];
+        foreach ($event->foodServices as $service) {
+            $foodServiceQuantities[$service->id] = $service->pivot->quantity;
+        }
+        
+        // Get selected group IDs from the relationship
+        $group_ids = $event->groups->pluck('id')->toArray();
+        
+        Log::info('Edit event - Group IDs:', ['event_id' => $id, 'group_ids' => $group_ids]);
+        
+        // Get user_ids from Attendance table
+        $attendanceUserIds = Attendance::where('event_id', $id)->pluck('user_id')->toArray();
+        
+        // Get user IDs that belong to the selected groups
+        $groupUserIds = [];
+        if (!empty($group_ids)) {
+            $groupUserIds = GroupUser::whereIn('group_id', $group_ids)
+                ->pluck('user_id')
+                ->unique()
+                ->toArray();
+            
+            Log::info('Users from selected groups:', ['count' => count($groupUserIds)]);
+        }
+        
+        // Only show users in "Additional Members" who are NOT part of the selected groups
+        $user_ids = array_diff($attendanceUserIds, $groupUserIds);
+        
+        Log::info('Final user_ids for Additional Members:', ['count' => count($user_ids)]);
+        
+        return view('calendar.event-list.edit', compact(
+            'event', 
+            'groups', 
+            'users', 
+            'foodServices',
+            'selectedFoodServices',
+            'foodServiceQuantities',
+            'group_ids', 
+            'user_ids'
+        ));
     }
-    
-    // Get group_id
-    $group_id = $event->group_id;
-    
-    // FIX: Get user_ids from Attendance table instead of $event->users
-    $user_ids = Attendance::where('event_id', $id)->pluck('user_id')->toArray();
-    
-    return view('calendar.event-list.edit', compact(
-        'event', 
-        'groups', 
-        'users', 
-        'foodServices',
-        'selectedFoodServices',
-        'foodServiceQuantities',
-        'group_id', 
-        'user_ids'
-    ));
-}
 
     public function update_event(Request $request, $id)
     {
-        Log::info($request->all());
-        Log::info($id);
+        Log::info('Update event:', ['event_id' => $id, 'request_data' => $request->all()]);
         $sendMailCheck = $request->send_mail ?? 0;
-        Log::info($sendMailCheck);
 
         // Find the event by ID
         $event = Event::findOrFail($id);
 
         // Update the event attributes
         $event->title = $request->title;
+        $event->address = $request->address;
         $event->start = $request->start;
         $event->end = $request->end;
         $event->description = $request->description;
-        $event->group_id = $request->group_id;
         $event->status = $request->status;
         $event->save();
 
-        // Update Food Services
-        // First, remove all existing food services for this event
+        // Sync Groups with Event using the pivot table
+        if ($request->has('group_ids') && is_array($request->group_ids)) {
+            $groupIds = array_filter($request->group_ids, function($id) {
+                return !empty($id);
+            });
+            
+            $event->groups()->sync($groupIds);
+            Log::info('Synced groups for event:', ['event_id' => $id, 'group_ids' => $groupIds]);
+        } else {
+            // No groups selected, detach all
+            $event->groups()->detach();
+            Log::info('Detached all groups from event:', ['event_id' => $id]);
+        }
+
+        // Update Food Services - batch operation
         DB::table('event_food_services')->where('event_id', $id)->delete();
         
-        // Then, add the new ones
         if ($request->has('food_service_ids') && is_array($request->food_service_ids)) {
+            $foodServiceData = [];
             foreach ($request->food_service_ids as $foodServiceId) {
                 $quantity = $request->input("food_service_quantities.{$foodServiceId}");
                 
-                DB::table('event_food_services')->insert([
+                $foodServiceData[] = [
                     'event_id' => $id,
                     'food_service_id' => $foodServiceId,
                     'quantity' => $quantity ?: null,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]);
+                ];
+            }
+            
+            if (!empty($foodServiceData)) {
+                DB::table('event_food_services')->insert($foodServiceData);
             }
         }
 
@@ -321,37 +337,62 @@ public function edit($id)
             Ticket::where('event_id', $id)->update(['status' => 'Active']);
         }
 
-        // Fetch existing user IDs from Attendance for the event
-        $user_ids = Attendance::where('event_id', $id)->pluck('user_id')->toArray();
+        // Fetch users from ALL selected groups
+        $groupIds = $request->input('group_ids', []);
+        $existingUserIdsFromGroups = [];
+        
+        if (!empty($groupIds)) {
+            $existingUserIdsFromGroups = GroupUser::whereIn('group_id', $groupIds)
+                ->pluck('user_id')
+                ->unique()
+                ->toArray();
+        }
 
-        // Fetch new user IDs from the request
+        // Fetch userIds from the request (manually added users)
         $newUserIds = $request->input('userId', []);
 
+        // Combine both group users and manually selected users, remove duplicates
+        $allNewUserIds = array_unique(array_merge($existingUserIdsFromGroups, $newUserIds));
+
+        // Fetch existing user IDs from Attendance for the event
+        $existingAttendanceUserIds = Attendance::where('event_id', $id)->pluck('user_id')->toArray();
+
         // Find user IDs to be removed
-        $removedUserIds = array_diff($user_ids, $newUserIds);
+        $removedUserIds = array_diff($existingAttendanceUserIds, $allNewUserIds);
 
-        // Find new user IDs to be added
-        $addedUserIds = array_diff($newUserIds, $user_ids);
+        // Find new user IDs to be added (only those not already in attendance)
+        $addedUserIds = array_diff($allNewUserIds, $existingAttendanceUserIds);
 
-        // Remove the user IDs from the Attendance table
+        Log::info('Update summary:', [
+            'existing_attendance' => count($existingAttendanceUserIds),
+            'new_total' => count($allNewUserIds),
+            'to_remove' => count($removedUserIds),
+            'to_add' => count($addedUserIds)
+        ]);
+
+        // Remove the user IDs from the Attendance table - batch operation
         if (!empty($removedUserIds)) {
             Attendance::where('event_id', $id)
                 ->whereIn('user_id', $removedUserIds)
                 ->delete();
+            Log::info("Removed " . count($removedUserIds) . " users from event {$id}");
         }
 
         // Send notification email for new user IDs added
         if (!empty($addedUserIds)) {
-            $this->sendNotificationMail($addedUserIds, $event, $sendMailCheck);
+            if (count($addedUserIds) > 200) {
+                Log::warning("Large update detected (" . count($addedUserIds) . " new users).");
+            }
+            $this->sendNotificationMail($addedUserIds, $event, $sendMailCheck, $groupIds);
+            Log::info("Added " . count($addedUserIds) . " new users to event {$id}");
         }
 
-        return redirect()->route('events.index_list')->with('success', 'Event updated successfully with food services.');
+        return redirect()->route('events.index_list')->with('success', 'Event updated successfully. Check logs for email sending status.');
     }
-
 
     public function getEvents()
     {
-        $schedules = Event::all();
+        $schedules = Event::with('groups')->get(); // Eager load groups
         return response()->json($schedules);
     }
 
@@ -374,7 +415,6 @@ public function edit($id)
 
         Log::info($request->input('start_date'));
         Log::info($request->input('end_date'));
-
 
         return response()->json(['message' => 'Event moved successfully']);
     }

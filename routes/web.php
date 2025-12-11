@@ -351,9 +351,13 @@ Route::group([
     Route::get('/attendance/live-attendance-user/{eventId}', [AttendanceController::class, 'get_live_user'])->name('attendance.get_live_user');
     Route::post('/attendance-create', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::put('/update-attendance', [AttendanceController::class, 'update'])->name('updateAttendance');
-
+    Route::post('/attendance/scan-process', [AttendanceController::class, 'scanProcess'])->name('attendance.scan-process');
+    Route::post('/attendance/submit', [AttendanceController::class, 'submitAttendance'])->name('attendance.submit');
     Route::post('/attendance-input', [AttendanceController::class, 'attendance_input'])->name('attendance.page');
     Route::delete('/attendance/delete/{id}', [AttendanceController::class, 'deleteAttendance']);
+    // Add these routes to your routes/web.php file
+Route::post('/attendance-success', [AttendanceController::class, 'showSuccess'])->name('attendance.success');
+Route::post('/attendance-error', [AttendanceController::class, 'showError'])->name('attendance.error');
 
     // Attendance Report (new system)
     Route::get('attendance/report', [AttendanceReportController::class, 'index'])->name('attendance.report.index');

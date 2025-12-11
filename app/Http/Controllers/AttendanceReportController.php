@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\IdentifierScan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class AttendanceReportController extends Controller
 {
@@ -35,6 +37,9 @@ class AttendanceReportController extends Controller
         if (!$event) {
             return response()->json(['error' => 'Event not found'], 404);
         }
+
+        // Auto-update pending to absent if event has ended
+        $this->autoUpdatePendingToAbsent($eventId, $event->end);
 
         // Get attendance statistics
         $attendanceStats = Attendance::where('event_id', $eventId)
@@ -128,6 +133,9 @@ class AttendanceReportController extends Controller
             ];
         });
 
+        // Check if event has ended
+        $eventHasEnded = Carbon::parse($event->end)->isPast();
+
         return response()->json([
             'event' => [
                 'id' => $event->id,
@@ -135,6 +143,7 @@ class AttendanceReportController extends Controller
                 'start' => $event->start,
                 'end' => $event->end,
                 'address' => $event->address,
+                'has_ended' => $eventHasEnded,
             ],
             'summary' => [
                 'total_registered' => $totalRegistered,
@@ -166,6 +175,27 @@ class AttendanceReportController extends Controller
         ]);
     }
 
+    /**
+     * Automatically update pending attendances to absent if event has ended
+     */
+    private function autoUpdatePendingToAbsent($eventId, $eventEnd)
+    {
+        $eventEndDate = Carbon::parse($eventEnd);
+        $now = Carbon::now();
+
+        // If event has ended, update all pending to absent
+        if ($now->greaterThan($eventEndDate)) {
+            $updatedCount = Attendance::where('event_id', $eventId)
+                ->where('status', 'Pending')
+                ->update([
+                    'status' => 'Absent',
+                    'updated_at' => now()
+                ]);
+
+            Log::info("Auto-updated {$updatedCount} pending attendances to absent for event ID: {$eventId}");
+        }
+    }
+
     public function export(Request $request)
     {
         $eventId = $request->input('event');
@@ -180,7 +210,7 @@ class AttendanceReportController extends Controller
             return response()->json(['error' => 'Event not found'], 404);
         }
 
-        // Fetch the report data
+        // Fetch the report data (this will also trigger auto-update)
         $reportData = $this->fetch($request);
         $data = json_decode($reportData->content(), true);
 

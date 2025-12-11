@@ -10,13 +10,22 @@ class Event extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title', 'description', 'address', 'start', 'end', 'status', 'group_id'
+        'title', 'description', 'address', 'start', 'end', 'status'
     ];
 
     protected $casts = [
         'start' => 'datetime',
         'end' => 'datetime',
     ];
+
+    /**
+     * Many-to-Many relationship with Groups
+     */
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class, 'event_groups')
+            ->withTimestamps();
+    }
 
     public function foodServices()
     {
@@ -66,7 +75,7 @@ class Event extends Model
     }
 
     public function identifierScans()
-{
-    return $this->hasMany(IdentifierScan::class);
-}
+    {
+        return $this->hasMany(IdentifierScan::class);
+    }
 }
