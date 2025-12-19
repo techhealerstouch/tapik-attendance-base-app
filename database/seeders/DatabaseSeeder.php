@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
                 ButtonSeeder::class,
                 PageSeeder::class,
                 LinkTypesSeeder::class,
+                EmailTemplateSeeder::class,
             ]);
     }
 }

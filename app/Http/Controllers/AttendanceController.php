@@ -7,9 +7,12 @@ use App\Models\TicketGuest;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Event;
+use App\Models\EventTable;
+use App\Models\EventTableChair;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
@@ -17,13 +20,13 @@ class AttendanceController extends Controller
     {
         // Get all event titles
         $eventTitles = Event::pluck('title');
-        
+
         // Get all attendances with user relationship
         $attendances = Attendance::with('user')->get();
-        
+
         // Get all activated users
         $users = User::where('activate_status', 'activated')->get();
-    
+
         return view('calendar.attendance', [
             'eventTitles' => $eventTitles,
             'users' => $users,
@@ -34,7 +37,7 @@ class AttendanceController extends Controller
     public function index_live()
     {
         $eventTitles = Event::select('id', 'title')->get();
-    
+
         return view('tickets.admin.live-preview', [
             'events' => $eventTitles,
         ]);
@@ -45,11 +48,12 @@ class AttendanceController extends Controller
         try {
             // Get the limit from request, default to 10
             $limit = $request->input('limit', 10);
-            
+
             // Validate limit to prevent abuse
             $limit = in_array($limit, [10, 100, 500]) ? $limit : 10;
-            
+
             if ($eventId === 'all') {
+                // Get present attendances
                 $attendances = Attendance::with('user', 'event')
                     ->where('status', 'Present')
                     ->orderBy('time_in', 'desc')
@@ -61,10 +65,11 @@ class AttendanceController extends Controller
                     ->orderBy('updated_at', 'desc')
                     ->limit($limit)
                     ->get();
-                    
-                // Get total count for all events
-                $totalMembers = Attendance::where('status', 'Present')->count();
+
+                // Get total count of ALL attendance records (not just Present)
+                $totalMembers = Attendance::count();
             } else {
+                // Get present attendances for specific event
                 $attendances = Attendance::with('user', 'event')
                     ->where('status', 'Present')
                     ->where('event_id', $eventId)
@@ -84,11 +89,9 @@ class AttendanceController extends Controller
                 } else {
                     $ticketGuests = collect(); // Empty collection
                 }
-                
-                // Get total count for this specific event
-                $totalMembers = Attendance::where('event_id', $eventId)
-                    ->where('status', 'Present')
-                    ->count();
+
+                // Get total count of ALL attendance records for this event (not just Present)
+                $totalMembers = Attendance::where('event_id', $eventId)->count();
             }
 
             return response()->json([
@@ -97,7 +100,6 @@ class AttendanceController extends Controller
                 'totalMembers' => $totalMembers,
                 'limit' => $limit
             ]);
-
         } catch (\Throwable $th) {
             return response()->json(['error' => $th->getMessage()], 500);
         }
@@ -110,19 +112,19 @@ class AttendanceController extends Controller
     public function fetch(Request $request)
     {
         $selectedEvent = $request->input('event');
-        
+
         // Try to find by event title first (backward compatibility)
         $query = Attendance::with('user', 'event');
-        
+
         // Check if it's numeric (event ID) or string (event title)
         if (is_numeric($selectedEvent)) {
             $query->where('event_id', $selectedEvent);
         } else {
             $query->where('event_name', $selectedEvent);
         }
-        
+
         $attendances = $query->orderBy('time_in', 'desc')->get();
-        
+
         // Add formatted data
         $attendances = $attendances->map(function ($attendance) {
             return [
@@ -139,7 +141,7 @@ class AttendanceController extends Controller
                 'status' => $attendance->status,
             ];
         });
-        
+
         return response()->json($attendances);
     }
 
@@ -209,6 +211,10 @@ class AttendanceController extends Controller
         try {
             $identifier = $request->input('identifier');
             $eventId = $request->input('event_id');
+            $scanMode = $request->input('scan_mode', 'rfid'); // Get scan mode from request
+
+            // Store scan mode in session
+            session(['last_scan_mode' => $scanMode]);
 
             // Find event
             $event = Event::find($eventId);
@@ -248,11 +254,26 @@ class AttendanceController extends Controller
                 }
 
                 if ($attendance->status === 'Present') {
-                    return response()->json([
+                    $assignedChair = EventTableChair::whereHas('eventTable', function ($query) use ($event) {
+                        $query->where('event_id', $event->id);
+                    })->where('user_id', $user->id)->first();
+
+                    $errorData = [
                         'status' => 'error',
                         'message' => 'You have already submitted attendance for this event.',
                         'redirect' => true
-                    ]);
+                    ];
+
+                    if ($assignedChair) {
+                        $assignedChair->load('eventTable');
+                        $errorData['data'] = [
+                            'has_seat' => true,
+                            'table_name' => $assignedChair->eventTable->table_name,
+                            'chair_number' => $assignedChair->chair_number
+                        ];
+                    }
+
+                    return response()->json($errorData);
                 }
 
                 return response()->json([
@@ -268,7 +289,7 @@ class AttendanceController extends Controller
             // Check if it's a ticket
             elseif (substr($identifier, 0, 3) === 'TCK') {
                 $ticketGuest = TicketGuest::where('ticket_no', $identifier)->first();
-                
+
                 if (!$ticketGuest) {
                     return response()->json([
                         'status' => 'error',
@@ -333,11 +354,26 @@ class AttendanceController extends Controller
                 }
 
                 if ($attendance->status === 'Present') {
-                    return response()->json([
+                    $assignedChair = EventTableChair::whereHas('eventTable', function ($query) use ($event) {
+                        $query->where('event_id', $event->id);
+                    })->where('user_id', $user->id)->first();
+
+                    $errorData = [
                         'status' => 'error',
                         'message' => 'You have already submitted attendance for this event.',
                         'redirect' => true
-                    ]);
+                    ];
+
+                    if ($assignedChair) {
+                        $assignedChair->load('eventTable');
+                        $errorData['data'] = [
+                            'has_seat' => true,
+                            'table_name' => $assignedChair->eventTable->table_name,
+                            'chair_number' => $assignedChair->chair_number
+                        ];
+                    }
+
+                    return response()->json($errorData);
                 }
 
                 return response()->json([
@@ -361,7 +397,80 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Submit attendance with representative
+     * Automatically assign an available chair to a user
+     * This method uses pessimistic locking to prevent race conditions when multiple
+     * users scan simultaneously. Each transaction locks the chair row before checking
+     * availability, ensuring no two users can be assigned the same chair.
+     */
+    private function assignChair($eventId, $userId)
+    {
+        try {
+            // Check if user already has a chair assigned for this event
+            $existingChair = EventTableChair::whereHas('eventTable', function ($query) use ($eventId) {
+                $query->where('event_id', $eventId);
+            })->where('user_id', $userId)->first();
+
+            if ($existingChair) {
+                // User already has a chair, return it
+                $existingChair->load('eventTable');
+                return [
+                    'success' => true,
+                    'table_name' => $existingChair->eventTable->table_name,
+                    'chair_number' => $existingChair->chair_number
+                ];
+            }
+
+            // Find an available chair using a database transaction with row-level locking
+            // Skip tables with manual_assignment = true
+            $availableChair = DB::transaction(function () use ($eventId, $userId) {
+                // Get all tables for this event where manual_assignment is FALSE, ordered by priority
+                $tables = EventTable::where('event_id', $eventId)
+                    ->where('manual_assignment', false) // SKIP MANUAL ASSIGNMENT TABLES
+                    ->orderBy('order')
+                    ->get();
+
+                foreach ($tables as $table) {
+                    // CRITICAL: lockForUpdate() creates a pessimistic lock
+                    $chair = EventTableChair::where('event_table_id', $table->id)
+                        ->whereNull('user_id')
+                        ->orderBy('chair_number')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($chair) {
+                        // At this point, we have an exclusive lock on this chair
+                        $chair->user_id = $userId;
+                        $chair->save();
+
+                        // Return immediately after successful assignment
+                        return [
+                            'success' => true,
+                            'table_name' => $table->table_name,
+                            'chair_number' => $chair->chair_number
+                        ];
+                    }
+                    // If no chair found in this table, continue to next table
+                }
+
+                // No available chairs found in any non-manual table
+                return [
+                    'success' => false,
+                    'message' => 'No available seats at this time.'
+                ];
+            });
+
+            return $availableChair;
+        } catch (\Throwable $th) {
+            Log::error('Error in assignChair: ' . $th->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error assigning seat.'
+            ];
+        }
+    }
+
+    /**
+     * Submit attendance with representative and automatic chair assignment
      */
     public function submitAttendance(Request $request)
     {
@@ -370,9 +479,10 @@ class AttendanceController extends Controller
             $attendanceId = $request->input('attendance_id');
             $representative = $request->input('representative');
             $updateUserRep = $request->input('update_user_rep', 0);
+            $enableRepPrompt = $request->input('enable_rep_prompt', 0); // ADD THIS
 
             $attendance = Attendance::find($attendanceId);
-            
+
             if (!$attendance) {
                 return response()->json([
                     'status' => 'error',
@@ -381,31 +491,38 @@ class AttendanceController extends Controller
                 ]);
             }
 
-            // Get user details
             $user = User::find($userId);
             $event = Event::find($attendance->event_id);
+            $chairAssignment = $this->assignChair($attendance->event_id, $userId);
 
-            // Update attendance
             $attendance->time_in = now();
             $attendance->status = 'Present';
             $attendance->rep_by = $representative;
             $attendance->save();
 
-            // Update user representative if needed
             if ($updateUserRep && $user) {
                 $user->representative = $representative;
                 $user->save();
             }
 
-            return response()->json([
+            $responseData = [
                 'status' => 'success',
                 'message' => 'Attendance marked successfully!',
                 'redirect' => true,
                 'data' => [
                     'name' => $user ? $user->name : null,
-                    'event' => $event ? $event->title : $attendance->event_name
+                    'event' => $event ? $event->title : $attendance->event_name,
+                    'has_seat' => $chairAssignment['success'],
+                    'enable_rep_prompt' => $enableRepPrompt // ADD THIS
                 ]
-            ]);
+            ];
+
+            if ($chairAssignment['success']) {
+                $responseData['data']['table_name'] = $chairAssignment['table_name'];
+                $responseData['data']['chair_number'] = $chairAssignment['chair_number'];
+            }
+
+            return response()->json($responseData);
         } catch (\Throwable $th) {
             Log::error('Error in submitAttendance: ' . $th->getMessage());
             return response()->json([
@@ -416,41 +533,45 @@ class AttendanceController extends Controller
         }
     }
 
-public function attendance_input(Request $request)
-{
-    $event = $request->event;
-    
-    $eventDetails = Event::where('title', $event)->first();
+    public function attendance_input(Request $request)
+    {
+        $event = $request->event;
 
-    if (!$eventDetails) {
-        return redirect()->back()->with('error', 'Event not found.');
+        $eventDetails = Event::where('title', $event)->first();
+
+        if (!$eventDetails) {
+            return redirect()->back()->with('error', 'Event not found.');
+        }
+
+        $startDate = \DateTime::createFromFormat('Y-m-d H:i:s', $eventDetails->start);
+        $endDate = \DateTime::createFromFormat('Y-m-d H:i:s', $eventDetails->end);
+
+        if ($startDate === false) {
+            return redirect()->back()->with('error', 'Invalid event start date format.');
+        }
+
+        if ($endDate === false) {
+            return redirect()->back()->with('error', 'Invalid event end date format.');
+        }
+
+        $formattedStart = $startDate->format('F d, Y');
+        $formattedEnd = $endDate->format('F d, Y');
+
+        // Get last scan mode from session, default to 'rfid'
+        $lastScanMode = session('last_scan_mode', 'rfid');
+
+        $data = [
+            'event' => $event,
+            'event_id' => $eventDetails->id,
+            'start' => $formattedStart,
+            'end' => $formattedEnd,
+            'address' => $eventDetails->address,
+            'enable_rep_prompt' => $request->input('enable_rep_prompt', 0),
+            'last_scan_mode' => $lastScanMode, // Pass to view
+        ];
+
+        return view('calendar.attendance-input', $data);
     }
-
-    $startDate = \DateTime::createFromFormat('Y-m-d H:i:s', $eventDetails->start);
-    $endDate = \DateTime::createFromFormat('Y-m-d H:i:s', $eventDetails->end);
-
-    if ($startDate === false) {
-        return redirect()->back()->with('error', 'Invalid event start date format.');
-    }
-
-    if ($endDate === false) {
-        return redirect()->back()->with('error', 'Invalid event end date format.');
-    }
-
-    $formattedStart = $startDate->format('F d, Y');
-    $formattedEnd = $endDate->format('F d, Y');
-
-    $data = [
-        'event' => $event,
-        'event_id' => $eventDetails->id,
-        'start' => $formattedStart,
-        'end' => $formattedEnd,
-        'address' => $eventDetails->address,
-        'enable_rep_prompt' => $request->input('enable_rep_prompt', 0),
-    ];
-
-    return view('calendar.attendance-input', $data);
-}
 
     public function deleteAttendance($id)
     {
@@ -470,31 +591,42 @@ public function attendance_input(Request $request)
         }
     }
 
-    /**
-     * Show success page
-     */
     public function showSuccess(Request $request)
     {
         $name = $request->input('name');
         $event = $request->input('event');
-        
+        $tableName = $request->input('table_name');
+        $chairNumber = $request->input('chair_number');
+        $hasSeat = $request->input('has_seat', false);
+        $enableRepPrompt = $request->input('enable_rep_prompt', 0); // ADD THIS
+
         return view('calendar.attendance-success')->with([
             'name' => $name,
-            'event' => $event
+            'event' => $event,
+            'table_name' => $tableName,
+            'chair_number' => $chairNumber,
+            'has_seat' => $hasSeat,
+            'enable_rep_prompt' => $enableRepPrompt // ADD THIS
         ]);
     }
 
-    /**
-     * Show error page
-     */
+    // Update showError method
     public function showError(Request $request)
     {
         $error = $request->input('error');
         $event = $request->input('event');
-        
+        $tableName = $request->input('table_name');
+        $chairNumber = $request->input('chair_number');
+        $hasSeat = $request->input('has_seat', false);
+        $enableRepPrompt = $request->input('enable_rep_prompt', 0); // ADD THIS
+
         return view('calendar.attendance-error')->with([
             'error' => $error,
-            'event' => $event
+            'event' => $event,
+            'table_name' => $tableName,
+            'chair_number' => $chairNumber,
+            'has_seat' => $hasSeat,
+            'enable_rep_prompt' => $enableRepPrompt // ADD THIS
         ]);
     }
 }

@@ -605,6 +605,87 @@
                             @endif
 
                             <hr class="professional-divider">
+<!-- Tables Section -->
+<div class="section-header">
+    <i class="bi bi-table"></i>
+    <h5>Event Tables</h5>
+</div>
+
+<div class="alert alert-info alert-professional d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-info-circle me-3 fs-4"></i>
+    <div>
+        <strong>Manage Tables:</strong> For detailed table and seating management, please visit the 
+        <a href="{{ route('event.tables.index') }}" class="alert-link" target="_blank">Seat Management Page</a>.
+    </div>
+</div>
+
+@if($event->tables && $event->tables->count() > 0)
+<div class="stats-card mb-4">
+    <h6>
+        <i class="bi bi-table"></i>
+        Current Tables
+    </h6>
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Table Name</th>
+                    <th>Total Chairs</th>
+                    <th>Assigned</th>
+                    <th>Available</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($event->tables as $table)
+                <tr>
+                    <td><strong>{{ $table->table_name }}</strong></td>
+                    <td>
+                        <span class="badge bg-secondary">{{ $table->chair_count }}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-success">
+                            {{ $table->chairs()->whereNotNull('user_id')->count() }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary">
+                            {{ $table->chair_count - $table->chairs()->whereNotNull('user_id')->count() }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ route('event.tables.index') }}?event={{ $event->id }}" 
+                           class="btn btn-sm btn-primary" 
+                           target="_blank">
+                            <i class="bi bi-pencil"></i> Manage
+                        </a>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-3">
+        <a href="{{ route('event.tables.index') }}?event={{ $event->id }}" 
+           class="btn btn-primary" 
+           target="_blank">
+            <i class="bi bi-table"></i> Go to Seat Management
+        </a>
+    </div>
+</div>
+@else
+<div class="text-center py-4" style="background: #f8fafc; border-radius: 10px; border: 2px dashed #cbd5e1;">
+    <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+    <p class="text-muted mb-2">No tables created for this event yet</p>
+    <a href="{{ route('event.tables.index') }}?event={{ $event->id }}" 
+       class="btn btn-primary" 
+       target="_blank">
+        <i class="bi bi-plus-circle"></i> Create Tables
+    </a>
+</div>
+@endif
+
+                            <hr class="professional-divider">
 
                             <!-- Notification Settings -->
                             <div class="section-header">

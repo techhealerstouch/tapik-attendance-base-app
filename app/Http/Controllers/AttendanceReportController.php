@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Event;
 use App\Models\User;
 use App\Models\IdentifierScan;
+use App\Models\EventTableChair;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -52,6 +53,16 @@ class AttendanceReportController extends Controller
         $attendances = Attendance::with('user')
             ->where('event_id', $eventId)
             ->orderBy('time_in', 'desc')
+            ->get();
+
+        // Get seat assignments for the event
+        $seatAssignments = EventTableChair::whereHas('eventTable', function ($query) use ($eventId) {
+                $query->where('event_id', $eventId);
+            })
+            ->with(['user', 'eventTable'])
+            ->whereNotNull('user_id')
+            ->orderBy('event_table_id')
+            ->orderBy('chair_number')
             ->get();
 
         // Get identifier scan statistics
@@ -133,6 +144,16 @@ class AttendanceReportController extends Controller
             ];
         });
 
+        // Format seat assignments
+        $formattedSeatAssignments = $seatAssignments->map(function ($chair) {
+            return [
+                'user_name' => $chair->user->name ?? 'N/A',
+                'user_email' => $chair->user->email ?? 'N/A',
+                'table_name' => $chair->eventTable->table_name ?? 'N/A',
+                'chair_number' => $chair->chair_number,
+            ];
+        });
+
         // Check if event has ended
         $eventHasEnded = Carbon::parse($event->end)->isPast();
 
@@ -154,6 +175,7 @@ class AttendanceReportController extends Controller
                 'early_arrivals' => $earlyArrivals,
                 'on_time_arrivals' => $onTimeArrivals,
                 'late_arrivals' => $lateArrivals,
+                'total_seats_assigned' => $seatAssignments->count(),
             ],
             'scan_stats' => [
                 'total_users_scanned' => $scanStats->total_users_scanned ?? 0,
@@ -172,6 +194,7 @@ class AttendanceReportController extends Controller
                 ];
             }),
             'attendances' => $formattedAttendances,
+            'seat_assignments' => $formattedSeatAssignments,
         ]);
     }
 
@@ -221,6 +244,7 @@ class AttendanceReportController extends Controller
             'scan_stats' => $data['scan_stats'],
             'attendances' => $data['attendances'],
             'multiple_scans' => $data['multiple_scans'],
+            'seat_assignments' => $data['seat_assignments'],
         ]);
     }
 }

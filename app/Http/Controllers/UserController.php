@@ -1618,284 +1618,149 @@ class UserController extends Controller
 
     //Show littlelinke page for edit
 
-    public function showPage(Request $request)
-
-    {
-
-        $userId = Auth::user()->id;
-
-    
-
-        // Get user information
-
-        $data['pages'] = User::where('id', $userId)
-
-            ->select('littlelink_name', 'littlelink_description', 'image', 'name')
-
-            ->get();
-
-    
-
-        $profinfo = ProfessionalInformation::firstOrCreate(
-
-            ['user_id' => $userId],  // Condition to check
-
-            [ // Default values if a new record is created
-
-                'title' => null,
-
-                'company' => null,
-
-                'location' => null,
-
-                'country' => null,
-
-                'email' => null,
-
-                'mobile' => null,
-
-                'role' => null,
-
-            ]
-
-        );
-
-    
-
-        $data['profinfo'] = $profinfo;
-
-    
-
-        return view('/studio/page', $data);
-
-    }
-
-    
-
-    //Save littlelink page (name, description, logo)
-
     public function editPage(Request $request)
-
-    {   
-
-        Log::info('Request data:', $request->all());
-
-        $userId = Auth::user()->id;
-
-        $littlelink_name = Auth::user()->littlelink_name;
-
-    
-
-        $validator = Validator::make($request->all(), [
-
-            'littlelink_name' => [
-
-                'sometimes',
-
-                'max:255',
-
-                'string',
-
-                'isunique:users,id,'.$userId,
-
-            ],
-
-            'name' => 'sometimes|max:255|string',
-
-            'image' => 'sometimes|image|mimes:jpeg,jpg,png,webp|max:2048', // Max file size: 2MB
-
-        ], [
-
-            'littlelink_name.unique' => __('messages.That handle has already been taken'),
-
-            'image.image' => __('messages.The selected file must be an image'),
-
-            'image.mimes' => __('messages.The image must be') . ' JPEG, JPG, PNG, webP.',
-
-            'image.max' => __('messages.The image size should not exceed 2MB'),
-
-        ]);
-
-    
-
-        if ($validator->fails()) {
-
-            return redirect('/studio/page')->withErrors($validator)->withInput();
-
-        }
-
-    
-
-        $profilePhoto = $request->file('image');
-
-        $pageName = $request->littlelink_name;
-
-        $pageDescription = strip_tags($request->pageDescription, '<a><p><strong><i><ul><ol><li><blockquote><h2><h3><h4>');
-
-        $pageDescription = preg_replace("/<a([^>]*)>/i", "<a $1 rel=\"noopener noreferrer nofollow\">", $pageDescription);
-
-        $pageDescription = strip_tags_except_allowed_protocols($pageDescription);
-
-        $name = $request->name;
-
-        $checkmark = $request->checkmark;
-
-        $sharebtn = $request->sharebtn;
-
-        $tablinks = $request->tablinks;
-
-        $professional = $request->professional;
-
-        $details = $request->details;
-
-        $title = $request->title;
-
-        $country = $request->country;
-
-        $company = $request->company;
-
-        $location = $request->location;
-
-        $email = $request->email;
-
-        $mobile = $request->mobile;
-
-        $role = $request->role;
-
-        
-
-        if(env('HOME_URL') !== '' && $pageName != $littlelink_name && $littlelink_name == env('HOME_URL')){
-
-            EnvEditor::editKey('HOME_URL', $pageName);
-
-        }
-
-    
-
-        User::where('id', $userId)->update([
-
-            'littlelink_description' => $pageDescription,
-
-            'name' => $name
-
-        ]);
-
-
-
-        ProfessionalInformation::where('user_id', $userId)->update([
-
-            'title' => $title,
-
-            'company' => $company,
-
-            'location' => $location,
-
-            'country' => $country,
-
-            'email' => $email,
-
-            'mobile' => $mobile,
-
-            'role' => $role,
-
-        ]);
-
-    
-
-        if ($request->hasFile('image')) {
-
-
-
-            // Delete the user's current avatar if it exists
-
-            while (findAvatar($userId) !== "error.error") {
-
-                $avatarName = findAvatar($userId);
-
-                unlink(base_path($avatarName));
-
-            }
-            
-            if($request->file('image')){
-                $manager = new ImageManager(new Driver());
-                $fileName = $userId . '_' . time() . "." . $profilePhoto->extension();
-                $img = $manager->read($request->file('image'));
-                $img = $img->resize(600,600);
-                $img->save(base_path('assets/img/' . $fileName));
-            }
-            
-
-            
-
-            //$profilePhoto->move(base_path('assets/img'), $fileName);
-
-        }
-
-    
-
-        if ($checkmark == "on") {
-
-            UserData::saveData($userId, 'checkmark', true);
-
-        } else {
-
-            UserData::saveData($userId, 'checkmark', false);
-
-        }
-
-    
-
-        if ($sharebtn == "on") {
-
-            UserData::saveData($userId, 'disable-sharebtn', false);
-
-        } else {
-
-            UserData::saveData($userId, 'disable-sharebtn', true);
-
-        }
-
-
-
-        if ($tablinks == "on") {
-
-            UserData::saveData($userId, 'links-new-tab', true);
-
-        } else {
-
-            UserData::saveData($userId, 'links-new-tab', false);
-
-        }
-
-
-
-        if ($professional == "on") {
-
-            UserData::saveData($userId, 'show-professional', true);
-
-        } else {
-
-            UserData::saveData($userId, 'show-professional', false);
-
-        }
-
-
-
-        if ($details == "on") {
-
-            UserData::saveData($userId, 'show-send-details', true);
-
-        } else {
-
-            UserData::saveData($userId, 'show-send-details', false);
-
-        }
-
-    
-
-        return Redirect('/studio/page');
-
+{   
+    Log::info('Request data:', $request->all());
+    $userId = Auth::user()->id;
+    $littlelink_name = Auth::user()->littlelink_name;
+
+    $validator = Validator::make($request->all(), [
+        'littlelink_name' => [
+            'sometimes',
+            'max:255',
+            'string',
+            'isunique:users,id,'.$userId,
+        ],
+        'name' => 'sometimes|max:255|string',
+        'representative' => 'nullable|max:255|string',
+        'image' => 'sometimes|image|mimes:jpeg,jpg,png,webp|max:2048', // Max file size: 2MB
+    ], [
+        'littlelink_name.unique' => __('messages.That handle has already been taken'),
+        'image.image' => __('messages.The selected file must be an image'),
+        'image.mimes' => __('messages.The image must be') . ' JPEG, JPG, PNG, webP.',
+        'image.max' => __('messages.The image size should not exceed 2MB'),
+    ]);
+
+    if ($validator->fails()) {
+        return redirect('/studio/page')->withErrors($validator)->withInput();
     }
+
+    $profilePhoto = $request->file('image');
+    $pageName = $request->littlelink_name;
+    $pageDescription = strip_tags($request->pageDescription, '<a><p><strong><i><ul><ol><li><blockquote><h2><h3><h4>');
+    $pageDescription = preg_replace("/<a([^>]*)>/i", "<a $1 rel=\"noopener noreferrer nofollow\">", $pageDescription);
+    $pageDescription = strip_tags_except_allowed_protocols($pageDescription);
+    $name = $request->name;
+    $representative = $request->representative;
+    $checkmark = $request->checkmark;
+    $sharebtn = $request->sharebtn;
+    $tablinks = $request->tablinks;
+    $professional = $request->professional;
+    $details = $request->details;
+    $title = $request->title;
+    $country = $request->country;
+    $company = $request->company;
+    $location = $request->location;
+    $email = $request->email;
+    $mobile = $request->mobile;
+    $role = $request->role;
+    
+    if(env('HOME_URL') !== '' && $pageName != $littlelink_name && $littlelink_name == env('HOME_URL')){
+        EnvEditor::editKey('HOME_URL', $pageName);
+    }
+
+    User::where('id', $userId)->update([
+        'littlelink_description' => $pageDescription,
+        'name' => $name,
+        'representative' => $representative
+    ]);
+
+    ProfessionalInformation::where('user_id', $userId)->update([
+        'title' => $title,
+        'company' => $company,
+        'location' => $location,
+        'country' => $country,
+        'email' => $email,
+        'mobile' => $mobile,
+        'role' => $role,
+    ]);
+
+    if ($request->hasFile('image')) {
+
+        // Delete the user's current avatar if it exists
+        while (findAvatar($userId) !== "error.error") {
+            $avatarName = findAvatar($userId);
+            unlink(base_path($avatarName));
+        }
+        
+        if($request->file('image')){
+            $manager = new ImageManager(new Driver());
+            $fileName = $userId . '_' . time() . "." . $profilePhoto->extension();
+            $img = $manager->read($request->file('image'));
+            $img = $img->resize(600,600);
+            $img->save(base_path('assets/img/' . $fileName));
+        }
+    }
+
+    if ($checkmark == "on") {
+        UserData::saveData($userId, 'checkmark', true);
+    } else {
+        UserData::saveData($userId, 'checkmark', false);
+    }
+
+    if ($sharebtn == "on") {
+        UserData::saveData($userId, 'disable-sharebtn', false);
+    } else {
+        UserData::saveData($userId, 'disable-sharebtn', true);
+    }
+
+    if ($tablinks == "on") {
+        UserData::saveData($userId, 'links-new-tab', true);
+    } else {
+        UserData::saveData($userId, 'links-new-tab', false);
+    }
+
+    if ($professional == "on") {
+        UserData::saveData($userId, 'show-professional', true);
+    } else {
+        UserData::saveData($userId, 'show-professional', false);
+    }
+
+    if ($details == "on") {
+        UserData::saveData($userId, 'show-send-details', true);
+    } else {
+        UserData::saveData($userId, 'show-send-details', false);
+    }
+
+    return Redirect('/studio/page');
+}
+
+public function showPage(Request $request)
+{
+    $userId = Auth::user()->id;
+
+    // Get user information
+    $data['pages'] = User::where('id', $userId)
+        ->select('littlelink_name', 'littlelink_description', 'image', 'name', 'representative')
+        ->get();
+
+    $profinfo = ProfessionalInformation::firstOrCreate(
+        ['user_id' => $userId],  // Condition to check
+        [ // Default values if a new record is created
+            'title' => null,
+            'company' => null,
+            'location' => null,
+            'country' => null,
+            'email' => null,
+            'mobile' => null,
+            'role' => null,
+        ]
+    );
+
+    $data['profinfo'] = $profinfo;
+
+    return view('/studio/page', $data);
+}
 
 
 

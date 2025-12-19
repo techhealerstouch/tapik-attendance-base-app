@@ -41,6 +41,7 @@ foreach($pages as $page)
                   @endif
               </div>
               <form id="multi-step-form" method="POST">
+              @csrf
               <p class="text-center">Setup your profile</p>
               <div id="setup-steps">
                     <!-- Initially, step 1 is displayed, others are hidden -->
@@ -88,6 +89,10 @@ foreach($pages as $page)
 
 <script>
 $(document).ready(function() {
+    // Get code from URL
+    const url = new URL(window.location.href);
+    const code = url.pathname.split('/').pop();
+    
     let currentStep = localStorage.getItem('currentStep') ? parseInt(localStorage.getItem('currentStep')) : 1;
     console.log('Current step retrieved from localStorage:', currentStep);
     const totalSteps = 5;
@@ -164,6 +169,11 @@ $(document).ready(function() {
         }
     }
 
+    // Make changeStep available globally
+    window.changeStep = function(direction) {
+        changeStep(direction);
+    };
+
     // Call loadDataFromLocalStorage for the initial step
     loadDataFromLocalStorage(currentStep);
 
@@ -208,6 +218,9 @@ function handleSubmit() {
         url: `/setup-profile/${code}/submit`, // URL to your controller method
         type: "POST",
         data: formData, // Form data to be sent
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
         success: function(response) {
             // Handle success response from the server
             console.log("Form submitted successfully");
@@ -217,7 +230,8 @@ function handleSubmit() {
         error: function(xhr, status, error) {
             // Handle error response from the server
             console.error("Error submitting form:", error);
-            // You can display an error message or take any other appropriate action here
+            console.error("Response:", xhr.responseText);
+            alert("Error submitting form. Please check console for details.");
         }
     });
 }

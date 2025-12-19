@@ -14,6 +14,7 @@ use App\Http\Controllers\PagesController;
 use App\Http\Controllers\InstallerController;
 use App\Http\Controllers\FoodServiceController;
 use App\Http\Controllers\AttendanceReportController;
+use App\Http\Controllers\EventTableController;
 use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\SendDetailsController;
@@ -221,6 +222,8 @@ Route::group([
     Route::get('/admin/edit-user/{id}', [AdminController::class, 'showUser'])->name('showUser');
     Route::post('/admin/edit-user/{id}', [AdminController::class, 'editUser'])->name('editUser');
     Route::get('/admin/new-user', [AdminController::class, 'createNewUser'])->name('createNewUser')->middleware('max.users');
+    // Add this route to your web.php or routes file
+    Route::post('/admin/users/create-multiple', [AdminController::class, 'createMultipleUsers'])->name('createMultipleUsers'); // Add appropriate middleware
     Route::post('/admin/import-users', [AdminController::class, 'import_users'])->name('importUsers');
     Route::get('/admin/delete-user/{id}', [AdminController::class, 'deleteUser'])->name('deleteUser');
     Route::post('/admin/delete-table-user/{id}', [AdminController::class, 'deleteTableUser'])->name('deleteTableUser');
@@ -336,6 +339,15 @@ Route::group([
     Route::view('add-schedule', 'calendar.add');
     Route::post('create-schedule', [ScheduleController::class, 'create']);
 
+    //Event Tables
+    Route::get('event-tables', [EventTableController::class, 'index_list'])->name('event.tables.index');
+    Route::get('event-tables/fetch', [EventTableController::class, 'fetch'])->name('event.tables.fetch');
+    Route::get('event-tables/attendees', [EventTableController::class, 'getEventAttendees'])->name('event.tables.attendees');
+    Route::post('event-tables/store', [EventTableController::class, 'storeTables'])->name('event.tables.store');
+    Route::post('event-tables/assign-chair', [EventTableController::class, 'assignChair'])->name('event.tables.assign');
+    Route::put('event-tables/{id}', [EventTableController::class, 'updateTable'])->name('event.tables.update');
+    Route::delete('event-tables/{id}', [EventTableController::class, 'deleteTable'])->name('event.tables.delete');
+
     //Attendance
     Route::get('/attendance/success', function () {
       return view('calendar.attendance-success');
@@ -353,7 +365,7 @@ Route::group([
     Route::put('/update-attendance', [AttendanceController::class, 'update'])->name('updateAttendance');
     Route::post('/attendance/scan-process', [AttendanceController::class, 'scanProcess'])->name('attendance.scan-process');
     Route::post('/attendance/submit', [AttendanceController::class, 'submitAttendance'])->name('attendance.submit');
-    Route::post('/attendance-input', [AttendanceController::class, 'attendance_input'])->name('attendance.page');
+    Route::match(['GET', 'POST'], '/attendance-input', [AttendanceController::class, 'attendance_input'])->name('attendance.page');
     Route::delete('/attendance/delete/{id}', [AttendanceController::class, 'deleteAttendance']);
     // Add these routes to your routes/web.php file
 Route::post('/attendance-success', [AttendanceController::class, 'showSuccess'])->name('attendance.success');

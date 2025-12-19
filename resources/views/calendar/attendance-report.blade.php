@@ -177,6 +177,24 @@
                         </div>
                     </div>
 
+                    <!-- Seat Assignment Table -->
+                    <div id="seatAssignmentSection" style="display: none;" class="mt-4">
+                        <h5 class="mb-3"><i class="bi bi-grid-3x3"></i> Seat Assignments</h5>
+                        <div class="table-responsive">
+                            <table id="seatAssignmentTable" class="table table-striped table-hover" style="width:100%">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Table Name</th>
+                                        <th>Chair #</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="seatAssignmentTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <!-- Empty State -->
                     <div id="emptyState" class="text-center text-muted py-5">
                         <i class="bi bi-inbox fs-1 d-block mb-2"></i>
@@ -226,7 +244,8 @@
 (function() {
     'use strict';
     
-    let dataTable = null;
+    let attendanceDataTable = null;
+    let seatDataTable = null;
     let currentSelectedEvent = '';
     let currentReportData = null;
 
@@ -278,6 +297,13 @@
         $('#emptyState').hide();
         $('#summarySection').show();
         $('#attendanceDetailsSection').show();
+        
+        // Show seat assignment section if there are seat assignments
+        if (data.seat_assignments && data.seat_assignments.length > 0) {
+            $('#seatAssignmentSection').show();
+        } else {
+            $('#seatAssignmentSection').hide();
+        }
 
         // Display Event Info
         displayEventInfo(data.event);
@@ -287,6 +313,9 @@
         
         // Display Attendance Table
         displayAttendanceTable(data.attendances);
+        
+        // Display Seat Assignment Table
+        displaySeatAssignmentTable(data.seat_assignments);
     }
 
     function displayEventInfo(event) {
@@ -333,9 +362,9 @@
     }
 
     function displayAttendanceTable(attendances) {
-        if (dataTable) {
-            dataTable.destroy();
-            dataTable = null;
+        if (attendanceDataTable) {
+            attendanceDataTable.destroy();
+            attendanceDataTable = null;
         }
 
         const tbody = $('#attendanceTableBody');
@@ -388,9 +417,52 @@
         });
 
         // Initialize DataTable
-        dataTable = $('#attendanceTable').DataTable({
+        attendanceDataTable = $('#attendanceTable').DataTable({
             pageLength: 25,
             order: [[3, 'desc']],
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search..."
+            }
+        });
+    }
+
+    function displaySeatAssignmentTable(seatAssignments) {
+        if (seatDataTable) {
+            seatDataTable.destroy();
+            seatDataTable = null;
+        }
+
+        const tbody = $('#seatAssignmentTableBody');
+        tbody.empty();
+
+        if (!seatAssignments || seatAssignments.length === 0) {
+            tbody.html(`
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No Seat Assignments</p>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        seatAssignments.forEach(seat => {
+            tbody.append(`
+                <tr>
+                    <td>${seat.user_name || 'N/A'}</td>
+                    <td>${seat.user_email || 'N/A'}</td>
+                    <td>${seat.table_name || 'N/A'}</td>
+                    <td><span class="badge bg-info">${seat.chair_number}</span></td>
+                </tr>
+            `);
+        });
+
+        // Initialize DataTable
+        seatDataTable = $('#seatAssignmentTable').DataTable({
+            pageLength: 25,
+            order: [[2, 'asc'], [3, 'asc']],
             language: {
                 search: "_INPUT_",
                 searchPlaceholder: "Search..."
@@ -405,11 +477,13 @@
         `).show();
         $('#summarySection').hide();
         $('#attendanceDetailsSection').hide();
+        $('#seatAssignmentSection').hide();
     }
 
     function showEmptyState() {
         $('#summarySection').hide();
         $('#attendanceDetailsSection').hide();
+        $('#seatAssignmentSection').hide();
         $('#emptyState').html(`
             <i class="bi bi-inbox fs-1 d-block mb-2"></i>
             <p class="mb-0">No Event Selected</p>
@@ -439,6 +513,7 @@
             ['Pending', currentReportData.summary.pending],
             ['Absent', currentReportData.summary.absent],
             ['Attendance Rate', currentReportData.summary.attendance_rate + '%'],
+            ['Total Seats Assigned', currentReportData.summary.total_seats_assigned || 0],
             [''],
             ['ARRIVAL STATISTICS'],
             ['Early Arrivals', currentReportData.summary.early_arrivals],
@@ -473,6 +548,25 @@
         
         const wsAttendance = XLSX.utils.aoa_to_sheet(attendanceData);
         XLSX.utils.book_append_sheet(wb, wsAttendance, 'Attendance Details');
+
+        // Seat Assignments Sheet
+        if (currentReportData.seat_assignments && currentReportData.seat_assignments.length > 0) {
+            const seatData = [
+                ['Name', 'Email', 'Table Name', 'Chair Number']
+            ];
+            
+            currentReportData.seat_assignments.forEach(seat => {
+                seatData.push([
+                    seat.user_name || 'N/A',
+                    seat.user_email || 'N/A',
+                    seat.table_name || 'N/A',
+                    seat.chair_number
+                ]);
+            });
+            
+            const wsSeats = XLSX.utils.aoa_to_sheet(seatData);
+            XLSX.utils.book_append_sheet(wb, wsSeats, 'Seat Assignments');
+        }
 
         // Multiple Scans Sheet (if any)
         if (currentReportData.multiple_scans && currentReportData.multiple_scans.length > 0) {

@@ -37,6 +37,9 @@
                                         </div>
 
                                         <div class="d-flex justify-content-end">
+                                            <button type="button" class="btn btn-primary mx-2" data-bs-toggle="modal" data-bs-target="#createUsersModal">
+                                                <i class="bi bi-person-plus"></i> Add New Users
+                                            </button>
                                             <button type="button" class="btn btn-primary mx-2" data-bs-toggle="modal" data-bs-target="#importUsersModal">
                                                 <i class="bi bi-cloud-upload"></i> Import Users
                                             </button>
@@ -58,41 +61,153 @@
                                           </div>
                                         <livewire:user-table />
 
-                                        <a href="{{ url('') }}/admin/new-user">+ {{ __('messages.Add new user') }}</a>
-
-
-                                        <!-- Import Users Modal -->
-                                        <!-- Import Users Modal -->
-                                        <div class="modal fade" id="importUsersModal" tabindex="-1"
-                                            aria-labelledby="importUsersModalLabel" aria-hidden="true">
+                                        <!-- Create Users Modal -->
+                                        <div class="modal fade" id="createUsersModal" tabindex="-1"
+                                            aria-labelledby="createUsersModalLabel" aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
-                                                        <h5 class="modal-title" id="importUsersModalLabel">Import Users</h5>
+                                                        <h5 class="modal-title" id="createUsersModalLabel">
+                                                            <i class="bi bi-person-plus-fill"></i> Create New Users
+                                                        </h5>
                                                         <button type="button" class="btn-close" data-bs-dismiss="modal"
                                                             aria-label="Close"></button>
                                                     </div>
-                                                    <div class="modal-body">
-                                                        <div class="mb-3">
-                                                            <label for="userFile" class="form-label">Choose File</label>
-                                                            <input type="file" class="form-control" id="userFile"
-                                                                accept=".xlsx,.csv">
+                                                    <form id="createUsersForm" action="{{ route('createMultipleUsers') }}" method="POST">
+                                                        @csrf
+                                                        <div class="modal-body">
+                                                            <div class="mb-3">
+                                                                <label for="userCount" class="form-label">
+                                                                    Number of Users to Create
+                                                                    <i class="bi bi-info-circle" data-bs-toggle="tooltip" 
+                                                                       title="Specify how many user accounts you want to create. Each user will have a unique activation code."></i>
+                                                                </label>
+                                                                <input type="number" class="form-control" id="userCount" 
+                                                                       name="user_count" min="1" max="100" value="1" required>
+                                                                <small class="form-text text-muted">
+                                                                    Enter a number between 1 and 100
+                                                                </small>
+                                                            </div>
+                                                            
+                                                            <div class="mb-3">
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" 
+                                                                           id="activateUsers" name="activate_users" value="1">
+                                                                    <label class="form-check-label" for="activateUsers">
+                                                                        Activate users upon creation
+                                                                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" 
+                                                                           title="If checked, users will be activated immediately and can start using their accounts. If unchecked, users will need to activate their accounts using their unique activation code."></i>
+                                                                    </label>
+                                                                </div>
+                                                                <small class="form-text text-muted">
+                                                                    Deactivated users will need to use their activation code to access their account
+                                                                </small>
+                                                            </div>
+
+                                                            <div class="alert alert-info" role="alert">
+                                                                <i class="bi bi-lightbulb"></i> 
+                                                                <strong>Note:</strong> Each user will be assigned a unique activation code. 
+                                                                Users will be named as "Unset-User-X" until they personalize their accounts.
+                                                            </div>
                                                         </div>
-                                                        <div id="filePreview" class="mt-3"></div>
-                                                        <!-- File preview and loading message will be here -->
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" id="processFile"
-                                                            class="btn btn-primary">Import</button>
-                                                        <button type="button" class="btn btn-secondary"
-                                                            data-bs-dismiss="modal">Close</button>
-                                                    </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-primary">
+                                                                <i class="bi bi-check-circle"></i> Create Users
+                                                            </button>
+                                                        </div>
+                                                    </form>
                                                 </div>
                                             </div>
                                         </div>
 
+                                        <!-- Import Users Modal -->
+<div class="modal fade" id="importUsersModal" tabindex="-1" aria-labelledby="importUsersModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importUsersModalLabel">
+                    <i class="bi bi-cloud-upload"></i> Import Users
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="importType" class="form-label">
+                        Import Type
+                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" 
+                           title="Select whether you're importing individual users or company profiles"></i>
+                    </label>
+                    <select class="form-select" id="importType">
+                        <option value="individual" selected>
+                            Individual Users ({{ $config['individual_prefix'] ?? 'nmyl' }} prefix)
+                        </option>
+                        <option value="company">
+                            Company Profiles ({{ $config['company_prefix'] ?? 'pt' }} prefix)
+                        </option>
+                    </select>
+                </div>
+                
+                <div class="alert alert-info" role="alert">
+                    <strong id="importTypeHelp">Individual Users:</strong>
+                    <ul id="importTypeDetails" class="mb-0 mt-2">
+                        <li>Requires: name, primary_email_address</li>
+                        <li>Optional: title, company_name, address, mobile_number, website_url</li>
+                        <li>Code prefix: <code>{{ $config['individual_prefix'] ?? 'nmyl' }}</code></li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <label for="userFile" class="form-label">Choose File (CSV or XLSX)</label>
+                    <input type="file" class="form-control" id="userFile" accept=".xlsx,.csv">
+                </div>
+                <div id="filePreview" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="processFile" class="btn btn-primary">
+                    <i class="bi bi-upload"></i> Import
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
                                         <script type="text/javascript">
+                                            // Initialize tooltips
+                                            document.addEventListener('DOMContentLoaded', function() {
+                                                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                                                var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                                                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                                                });
+                                            });
+const prefixConfig = {
+    individual: '{{ $config['individual_prefix'] ?? 'nmyl' }}',
+    company: '{{ $config['company_prefix'] ?? 'pt' }}'
+};
+ document.getElementById('importType').addEventListener('change', function() {
+    const importType = this.value;
+    const helpTitle = document.getElementById('importTypeHelp');
+    const helpDetails = document.getElementById('importTypeDetails');
+    
+    if (importType === 'company') {
+        helpTitle.textContent = 'Company Profiles:';
+        helpDetails.innerHTML = `
+            <li>Requires: company_name, primary_email_address</li>
+            <li>Optional: office_address_main, mobile_number, telephone_number, website_url</li>
+            <li>Code prefix: <code>${prefixConfig.company}</code></li>
+        `;
+    } else {
+        helpTitle.textContent = 'Individual Users:';
+        helpDetails.innerHTML = `
+            <li>Requires: name, primary_email_address</li>
+            <li>Optional: title, company_name, address, mobile_number, website_url</li>
+            <li>Code prefix: <code>${prefixConfig.individual}</code></li>
+        `;
+    }
+});
+
                                             // Function to confirm and delete users
                                             var confirmIt = function(e) {
                                                 e.preventDefault();
@@ -139,7 +254,7 @@
                                                 xhr.send();
                                             };
 
-                                            // Attach click event listeners to elements with class 'confirmation', 'user-email', and 'user-block'
+                                            // Attach click event listeners
                                             var attachClickEventListeners = function(className, handler) {
                                                 var elems = document.getElementsByClassName(className);
                                                 for (var i = 0, l = elems.length; i < l; i++) {
@@ -158,7 +273,7 @@
                                             attachClickEventListeners('user-status', handleUserClick);
 
 
-                                            let parsedData = []; // Global variable to store parsed data
+                                            let parsedData = [];
 
                                             document.getElementById('processFile').addEventListener('click', () => {
                                                 const fileInput = document.getElementById('userFile');
@@ -170,7 +285,6 @@
                                                 }
 
                                                 if (file.name.endsWith('.csv')) {
-                                                    // Parse CSV file
                                                     Papa.parse(file, {
                                                         header: true,
                                                         complete: function(results) {
@@ -183,7 +297,6 @@
                                                         },
                                                     });
                                                 } else if (file.name.endsWith('.xlsx')) {
-                                                    // Parse XLSX file
                                                     const reader = new FileReader();
                                                     reader.onload = (e) => {
                                                         const data = new Uint8Array(e.target.result);
@@ -202,54 +315,52 @@
                                             });
 
                                             function validateRow(row) {
-                                                // Check if all fields in the row are either non-empty or meet specific criteria
                                                 return Object.values(row).some(value => value && value.toString().trim() !== '');
                                             }
 
                                             function uploadData() {
-                                                // Get the file input container
-                                                const filePreviewDiv = document.getElementById('filePreview');
+    const filePreviewDiv = document.getElementById('filePreview');
+    const importType = document.getElementById('importType').value;
+    const prefix = prefixConfig[importType];
 
-                                                // Create the loading message and append it below the file input
-                                                const loadingMessage = document.createElement('div');
-                                                loadingMessage.textContent = 'Importing users...';
-                                                loadingMessage.id = 'loading-message';
-                                                loadingMessage.style.backgroundColor = '#f8f9fa';
-                                                loadingMessage.style.color = '#6c757d';
-                                                loadingMessage.style.padding = '10px';
-                                                loadingMessage.style.borderRadius = '5px';
-                                                loadingMessage.style.fontSize = '14px';
-                                                loadingMessage.style.marginTop = '10px';
-                                                filePreviewDiv.appendChild(loadingMessage);
+    const loadingMessage = document.createElement('div');
+    loadingMessage.textContent = `Importing ${importType} users with prefix "${prefix}"...`;
+    loadingMessage.id = 'loading-message';
+    loadingMessage.style.backgroundColor = '#f8f9fa';
+    loadingMessage.style.color = '#6c757d';
+    loadingMessage.style.padding = '10px';
+    loadingMessage.style.borderRadius = '5px';
+    loadingMessage.style.fontSize = '14px';
+    loadingMessage.style.marginTop = '10px';
+    filePreviewDiv.appendChild(loadingMessage);
 
-                                                // Perform the fetch request
-                                                fetch('{{ route('importUsers') }}', {
-                                                        method: 'POST',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                                        },
-                                                        body: JSON.stringify({
-                                                            users: parsedData
-                                                        }),
-                                                    })
-                                                    .then((response) => response.json())
-                                                    .then((data) => {
-                                                        alert(data.message); // Show the success message
-                                                        location.reload(); // Reload the page
-                                                    })
-                                                    .catch((error) => {
-                                                        console.error('Error uploading data:', error);
-                                                        alert('Failed to upload data.');
-                                                    })
-                                                    .finally(() => {
-                                                        // Remove the loading message when done (success or error)
-                                                        const loadingMessage = document.getElementById('loading-message');
-                                                        if (loadingMessage) {
-                                                            loadingMessage.remove();
-                                                        }
-                                                    });
-                                            }
+    fetch('{{ route('importUsers') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        },
+        body: JSON.stringify({
+            users: parsedData,
+            import_type: importType
+        }),
+    })
+    .then((response) => response.json())
+    .then((data) => {
+        alert(data.message);
+        location.reload();
+    })
+    .catch((error) => {
+        console.error('Error uploading data:', error);
+        alert('Failed to upload data.');
+    })
+    .finally(() => {
+        const loadingMessage = document.getElementById('loading-message');
+        if (loadingMessage) {
+            loadingMessage.remove();
+        }
+    });
+}
 
                                             document.addEventListener('DOMContentLoaded', function() {
                                                 $('#downloadUnsetUsers').on('click', function() {
@@ -257,36 +368,29 @@
                                                     var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
                                                     var loadingText = document.getElementById('loadingText');
 
-                                                    // Show the modal before sending the request
                                                     loadingModal.show();
-
-                                                    // Initial text
                                                     loadingText.textContent = "Processing your request, please wait...";
 
-                                                    // Send a request to get the download link
                                                     $.ajax({
-                                                        url: '/generate-qr-code', // Your route to generate QR code
+                                                        url: '/generate-qr-code',
                                                         method: 'POST',
                                                         data: {
-                                                            _token: '{{ csrf_token() }}' // CSRF token for security
+                                                            _token: '{{ csrf_token() }}'
                                                         },
                                                         xhrFields: {
-                                                            responseType: 'blob' // Handle binary data
+                                                            responseType: 'blob'
                                                         },
                                                         success: function(response) {
-                                                            // Hide the modal when the response is received
                                                             loadingModal.hide();
 
-                                                            // Create a URL for the blob data
                                                             var url = URL.createObjectURL(response);
                                                             var today = new Date();
                                                             var dateString = today.getFullYear() + '-' + 
                                                                 ('0' + (today.getMonth() + 1)).slice(-2) + '-' + 
                                                                 ('0' + today.getDate()).slice(-2);
 
-                                                            var filename = 'QR_Codes_' + dateString + '.xlsx'; // Filename with current date
+                                                            var filename = 'QR_Codes_' + dateString + '.xlsx';
 
-                                                            // Create a link element and trigger the download
                                                             var link = document.createElement('a');
                                                             link.href = url;
                                                             link.download = filename;
@@ -294,14 +398,10 @@
                                                             link.click();
                                                             document.body.removeChild(link);
 
-                                                            // Revoke the object URL after download
                                                             URL.revokeObjectURL(url);
                                                         },
                                                         error: function() {
-                                                            // Hide the modal if an error occurs
                                                             loadingModal.hide();
-
-                                                            // Handle error
                                                             alert('An error occurred while generating the QR codes.');
                                                         }
                                                     });

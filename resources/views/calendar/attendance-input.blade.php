@@ -1,216 +1,337 @@
-<!-- Updated attendance-input.blade.php -->
+<!-- attendance-input.blade.php -->
 @extends('layouts.lang')
 
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js" integrity="sha512-k/KAe4Yff9EUdYI5/IAHlwUswqeipP+Cp5qnrsUjTPCgl51La2/JhyyjNciztD7mWNKLSXci48m7cctATKfLlQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
   [x-cloak] { display: none !important; }
+  
   body, html {
     margin: 0;
     padding: 0;
-    height: 100%;
-    width: 100%;
-  }
-  .container-fluid.content-inner {
-    background-color: white !important;
     height: 100vh;
-    width: 100vw;
+    width: 100%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #4128b1ff 0%, #4128b1ff 100%);
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  .container-fluid.content-inner {
+    height: 100vh;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 20px;
+    overflow: hidden;
   }
+
+  .content-card {
+    background-color: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 900px;
+    width: 100%;
+    max-height: 95vh;
+    overflow-y: auto;
+    animation: fadeInUp 0.6s ease-out;
+  }
+
   .attendance-center {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
-  .body {
-    color: black !important;
+
+  .logo-container {
+    margin-bottom: 20px;
   }
-  .header-main {
-    margin-top: 50px;
+
+  .logo-container img {
+    max-width: 150px;
+    max-height: 150px;
+    object-fit: contain;
   }
+
   h2, h3, h4 {
     font-family: 'Poppins', sans-serif;
-    font-weight: 500;
-    color: #1c2972 !important;
+    color: #2d3748 !important;
+    margin: 0;
   }
+
+  .header-main {
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin-bottom: 10px;
+    color: #4a5568 !important;
+  }
+
+  .event-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #1a202c !important;
+  }
+
+  .event-details {
+    font-size: 1.1rem;
+    font-weight: 400;
+    margin-bottom: 8px;
+    color: #4a5568 !important;
+  }
+
+  .event-details strong {
+    color: #667eea;
+    font-weight: 600;
+  }
+
+  .event-date {
+    font-size: 1rem;
+    margin-bottom: 30px;
+    color: #718096 !important;
+  }
+
+  /* Toggle Switch Styles */
+  .checkbox-wrapper-35 {
+    margin-bottom: 30px;
+  }
+
   .checkbox-wrapper-35 .switch {
     display: none;
   }
+
   .checkbox-wrapper-35 .switch + label {
-    -webkit-box-align: center;
-    -webkit-align-items: center;
-    -ms-flex-align: center;
     align-items: center;
-    color: #78768d;
+    color: #4a5568;
     cursor: pointer;
-    display: -webkit-box;
-    display: -webkit-flex;
-    display: -ms-flexbox;
     display: flex;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 10px;
-    line-height: 15px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
     position: relative;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
     user-select: none;
   }
+
   .checkbox-wrapper-35 .switch + label::before,
   .checkbox-wrapper-35 .switch + label::after {
     content: '';
     display: block;
   }
+
   .checkbox-wrapper-35 .switch + label::before {
-    background-color: #05012c;
+    background-color: #cbd5e0;
     border-radius: 500px;
-    height: 15px;
-    margin-right: 8px;
-    -webkit-transition: background-color 0.125s ease-out;
+    height: 24px;
+    margin-right: 12px;
     transition: background-color 0.125s ease-out;
-    width: 25px;
+    width: 44px;
   }
+
   .checkbox-wrapper-35 .switch + label::after {
     background-color: #fff;
-    border-radius: 13px;
-    box-shadow: 0 3px 1px 0 rgba(37, 34, 71, 0.05), 0 2px 2px 0 rgba(37, 34, 71, 0.1), 0 3px 3px 0 rgba(37, 34, 71, 0.05);
-    height: 13px;
-    left: 1px;
+    border-radius: 50%;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+    height: 20px;
+    left: 2px;
     position: absolute;
-    top: 1px;
-    -webkit-transition: -webkit-transform 0.125s ease-out;
-    transition: -webkit-transform 0.125s ease-out;
+    top: 2px;
     transition: transform 0.125s ease-out;
-    transition: transform 0.125s ease-out, -webkit-transform 0.125s ease-out;
-    width: 13px;
+    width: 20px;
   }
+
   .checkbox-wrapper-35 .switch + label .switch-x-text {
     display: block;
-    margin-right: .3em;
+    margin-right: 12px;
   }
+
   .checkbox-wrapper-35 .switch + label .switch-x-toggletext {
     display: block;
-    font-weight: bold;
-    height: 15px;
+    font-weight: 600;
+    height: 20px;
     overflow: hidden;
     position: relative;
-    width: 25px;
+    width: 80px;
   }
+
   .checkbox-wrapper-35 .switch + label .switch-x-unchecked,
   .checkbox-wrapper-35 .switch + label .switch-x-checked {
     left: 0;
     position: absolute;
     top: 0;
-    -webkit-transition: opacity 0.125s ease-out, -webkit-transform 0.125s ease-out;
-    transition: opacity 0.125s ease-out, -webkit-transform 0.125s ease-out;
     transition: transform 0.125s ease-out, opacity 0.125s ease-out;
-    transition: transform 0.125s ease-out, opacity 0.125s ease-out, -webkit-transform 0.125s ease-out;
   }
+
   .checkbox-wrapper-35 .switch + label .switch-x-unchecked {
     opacity: 1;
-    -webkit-transform: none;
     transform: none;
   }
+
   .checkbox-wrapper-35 .switch + label .switch-x-checked {
     opacity: 0;
-    -webkit-transform: translate3d(0, 100%, 0);
     transform: translate3d(0, 100%, 0);
   }
+
   .checkbox-wrapper-35 .switch + label .switch-x-hiddenlabel {
     position: absolute;
     visibility: hidden;
   }
+
   .checkbox-wrapper-35 .switch:checked + label::before {
-    background-color: #ffb500;
+    background-color: #667eea;
   }
+
   .checkbox-wrapper-35 .switch:checked + label::after {
-    -webkit-transform: translate3d(10px, 0, 0);
-    transform: translate3d(10px, 0, 0);
+    transform: translate3d(20px, 0, 0);
   }
+
   .checkbox-wrapper-35 .switch:checked + label .switch-x-unchecked {
     opacity: 0;
-    -webkit-transform: translate3d(0, -100%, 0);
     transform: translate3d(0, -100%, 0);
   }
+
   .checkbox-wrapper-35 .switch:checked + label .switch-x-checked {
     opacity: 1;
-    -webkit-transform: none;
     transform: none;
   }
-  #reader {
-    width: 400px;
+
+  /* Scanner Section */
+  .scanner-section {
+    width: 100%;
+    margin-top: 20px;
   }
+
+  .scanner-instruction {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #4a5568;
+    margin-bottom: 20px;
+  }
+
+  #reader {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
   #result {
-    text-align: center;
-    font-size: 1.5rem;
+    margin-top: 20px;
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #667eea;
+  }
+
+  #rfid-status {
+    margin-top: 20px;
+    font-size: 1.2rem;
+    font-weight: 500;
+  }
+
+  #rfidInput {
+    border: none;
+    outline: none;
+    box-shadow: none;
+    color: transparent;
+    caret-color: transparent;
+    background-color: transparent;
+    -webkit-text-fill-color: transparent;
+    position: absolute;
+    left: -9999px;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .content-card {
+      padding: 30px 20px;
+      max-height: 98vh;
+    }
+
+    .logo-container img {
+      max-width: 120px;
+      max-height: 120px;
+    }
+
+    .event-title {
+      font-size: 1.5rem;
+    }
+
+    .header-main {
+      font-size: 1.1rem;
+    }
+
+    .event-details {
+      font-size: 1rem;
+    }
+
+    #reader {
+      max-width: 300px;
+    }
   }
 </style>
 
-<div class="container content-inner">
-  <div class="row">
-    <div class="col-lg-12">
-      <div class="row">
-        <div class="col-sm-12">
-          <div style="display: flex; justify-content: center; align-items: center; cursor: pointer;">
-            <img src="{{ asset('assets/linkstack/images/'.findFile('avatar')) }}" 
-                alt="Logo" 
-                style="max-width: 400px; max-height: 400px;" />
-          </div>
-          <section>
-            <div class="attendance-center">
-              <h3 class="header-main">Welcome to our</h3>
-              <h2 class="mb-4"><strong>{{ $event }}</strong></h2>
-              <h3>held at</h3>
-              <h2 class="mb-4"><strong>{{ $address }}</strong></h2>
-              <h3 style="margin-bottom: 3rem">Today <strong>{{ $start }}</strong></h3>
+<div class="container-fluid content-inner">
+  <div class="content-card">
+    <div class="attendance-center">
+      <div class="logo-container">
+        <img src="{{ asset('assets/linkstack/images/'.findFile('avatar')) }}" alt="Logo" />
+      </div>
 
-              <div class="checkbox-wrapper-35 pb-4">
-                <input value="private" name="switch" id="switch" type="checkbox" class="switch" onchange="toggleDiv()">
-                <label for="switch">
-                  <span class="switch-x-text"></span>
-                  <span class="switch-x-toggletext">
-                    <span class="switch-x-unchecked">
-                      <span class="switch-x-hiddenlabel">Unchecked: </span>Scan
-                    </span>
-                    <span class="switch-x-checked">
-                      <span class="switch-x-hiddenlabel">Checked: </span>QR
-                    </span>
-                  </span>
-                </label>
-              </div>
-              
-              <!-- Scanner Input Field -->
-              <div id="rfid" style="display: none;">
-                <h4 class="mb-4">Please tap your card to the card reader to mark your attendance</h4>
-                <input type='text' 
-                       id="rfidInput" 
-                       name="rfid_no" 
-                       class='form-control' 
-                       autofocus 
-                       style="border: none; outline: none; box-shadow: none; color: transparent; caret-color: transparent; background-color: transparent; -webkit-text-fill-color: transparent;" />
-              </div>
-              
-              <!-- QR code Scanner -->
-              <div id="qr" style="display: none; align-items: center; display: flex; flex-direction: column; justify-content: center;">
-                <h4 class="mb-4">Please scan the QR code of your ticket or NFC Card here</h4>
-                <div id="reader" style="margin: 0 auto;"></div>
-                <div id="result" style="margin-top: 1rem;"></div>
-              </div>
-            </div>
-          </section>
-        </div>
+      <h3 class="header-main">Welcome to our</h3>
+      <h2 class="event-title">{{ $event }}</h2>
+      <h3 class="event-details">held at <strong>{{ $address }}</strong></h3>
+      <h3 class="event-date">Today <strong>{{ $start }}</strong></h3>
+
+      <div class="checkbox-wrapper-35">
+        <input value="private" name="switch" id="switch" type="checkbox" class="switch" onchange="toggleDiv()">
+        <label for="switch">
+          <span class="switch-x-text"></span>
+          <span class="switch-x-toggletext">
+            <span class="switch-x-unchecked">
+              <span class="switch-x-hiddenlabel">Unchecked: </span>NFC/RFID Scan
+            </span>
+            <span class="switch-x-checked">
+              <span class="switch-x-hiddenlabel">Checked: </span>QR Code Scan
+            </span>
+          </span>
+        </label>
+      </div>
+      
+      <!-- Scanner Input Field -->
+      <div id="rfid" class="scanner-section" style="display: none;">
+        <h4 class="scanner-instruction">Please tap your card to the card reader to mark your attendance</h4>
+        <input type='text' id="rfidInput" name="rfid_no" autofocus />
+        <div id="rfid-status"></div>
+      </div>
+      
+      <!-- QR code Scanner -->
+      <div id="qr" class="scanner-section" style="display: none;">
+        <h4 class="scanner-instruction">Please scan the QR code of your ticket or NFC Card here</h4>
+        <div id="reader"></div>
+        <div id="result"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Representative Confirmation Modal - UPDATED VERSION -->
+<!-- Representative Confirmation Modal -->
 <div class="modal fade" id="repConfirmModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -267,6 +388,7 @@ let currentScanData = null;
 const enableRepPrompt = {{ $enable_rep_prompt ?? 0 }};
 const eventId = {{ $event_id }};
 const csrfToken = "{{ csrf_token() }}";
+const lastScanMode = "{{ $last_scan_mode ?? 'rfid' }}"; // Get from PHP
 
 // Ensure RFID input always has focus
 setInterval(() => {
@@ -283,14 +405,11 @@ let rfidTimeout = null;
 document.getElementById('rfidInput')?.addEventListener('input', function(e) {
     const value = e.target.value.trim();
     
-    // Clear any existing timeout
     if (rfidTimeout) {
         clearTimeout(rfidTimeout);
     }
     
-    // Check if value has sufficient length (adjust as needed)
     if (value.length >= 8) {
-        // Set a small timeout to ensure the full scan is captured
         rfidTimeout = setTimeout(() => {
             handleScan(value, 'rfid');
             e.target.value = '';
@@ -299,7 +418,6 @@ document.getElementById('rfidInput')?.addEventListener('input', function(e) {
     }
 });
 
-// Also handle on Enter key press for manual input
 document.getElementById('rfidInput')?.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
@@ -317,7 +435,6 @@ document.getElementById('rfidInput')?.addEventListener('keypress', function(e) {
 });
 
 function handleScan(identifier, scanType) {
-    // Show loading message
     showLoading(scanType);
 
     $.ajax({
@@ -326,43 +443,39 @@ function handleScan(identifier, scanType) {
         data: {
             identifier: identifier,
             event_id: eventId,
+            scan_mode: scanType, // Send scan mode to backend
             _token: csrfToken
         },
         success: function(response) {
             if (response.status === 'success') {
                 currentScanData = response.data;
                 
-                // Check if it's a ticket scan (no representative prompt needed)
                 if (response.data.type === 'ticket') {
-                    // Redirect to success page for tickets
                     redirectToPage('success', null, '{{ $event }}');
                 } 
-                // Check if representative prompt is enabled
                 else if (enableRepPrompt == 1) {
-                    // Set the user name in both modals
                     document.getElementById('userName').textContent = response.data.user_name;
                     document.getElementById('userNameCustom').textContent = response.data.user_name;
                     
-                    // Check if user has a representative set
                     if (response.data.representative) {
-                        // Show representative confirmation modal
                         document.getElementById('repName').textContent = response.data.representative;
                         const modal = new bootstrap.Modal(document.getElementById('repConfirmModal'));
                         modal.show();
                     } else {
-                        // No representative set - go directly to custom input
                         const modal = new bootstrap.Modal(document.getElementById('customRepModal'));
                         modal.show();
                     }
                 }
-                // No prompt enabled - process directly
                 else {
                     submitAttendance(response.data.user_id, response.data.attendance_id, response.data.representative, response.data.user_name);
                 }
             } else {
-                // Redirect to error page
                 if (response.redirect) {
-                    redirectToPage('error', response.message, '{{ $event }}');
+                    const hasSeat = response.data?.has_seat ?? false;
+                    const tableName = response.data?.table_name ?? null;
+                    const chairNumber = response.data?.chair_number ?? null;
+                    
+                    redirectToPage('error', response.message, '{{ $event }}', null, hasSeat, tableName, chairNumber);
                 }
             }
         },
@@ -379,18 +492,15 @@ function confirmRepresentative(confirmed) {
     }
     
     if (confirmed) {
-        // Use the representative from user profile
         submitAttendance(currentScanData.user_id, currentScanData.attendance_id, currentScanData.representative, currentScanData.user_name);
     } else {
-        // Show custom representative input
         setTimeout(() => {
             const customModal = new bootstrap.Modal(document.getElementById('customRepModal'));
             customModal.show();
-        }, 300); // Small delay to ensure first modal is fully hidden
+        }, 300);
     }
 }
 
-// Updated cancelCustomRep function
 function cancelCustomRep() {
     const customModal = bootstrap.Modal.getInstance(document.getElementById('customRepModal'));
     if (customModal) {
@@ -399,14 +509,12 @@ function cancelCustomRep() {
     document.getElementById('customRepInput').value = '';
     currentScanData = null;
     
-    // Refocus on RFID input if in RFID mode
     const rfidInput = document.getElementById('rfidInput');
     if (rfidInput && document.getElementById('rfid').style.display !== 'none') {
         setTimeout(() => rfidInput.focus(), 300);
     }
 }
 
-// Updated submitCustomRep function
 function submitCustomRep() {
     const customRep = document.getElementById('customRepInput').value.trim();
     
@@ -434,14 +542,13 @@ function submitAttendance(userId, attendanceId, representative, userName, update
             representative: representative,
             update_user_rep: updateUserRep ? 1 : 0,
             event_id: eventId,
+            enable_rep_prompt: enableRepPrompt, // ADD THIS
             _token: csrfToken
         },
         success: function(response) {
             if (response.status === 'success' && response.redirect) {
-                // Redirect to success page
-                redirectToPage('success', null, response.data.event, response.data.name);
+                redirectToPage('success', null, response.data.event, response.data.name, response.data.has_seat, response.data.table_name, response.data.chair_number);
             } else if (response.status === 'error' && response.redirect) {
-                // Redirect to error page
                 redirectToPage('error', response.message, '{{ $event }}');
             }
             currentScanData = null;
@@ -453,20 +560,18 @@ function submitAttendance(userId, attendanceId, representative, userName, update
     });
 }
 
-function redirectToPage(type, message, event, name = null) {
-    // Create a form to submit with session data
+
+function redirectToPage(type, message, event, name = null, hasSeat = false, tableName = null, chairNumber = null) {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = type === 'success' ? '/attendance-success' : '/attendance-error';
     
-    // Add CSRF token
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';
     csrfInput.name = '_token';
     csrfInput.value = csrfToken;
     form.appendChild(csrfInput);
     
-    // Add event
     if (event) {
         const eventInput = document.createElement('input');
         eventInput.type = 'hidden';
@@ -475,7 +580,6 @@ function redirectToPage(type, message, event, name = null) {
         form.appendChild(eventInput);
     }
     
-    // Add name (for success page)
     if (name) {
         const nameInput = document.createElement('input');
         nameInput.type = 'hidden';
@@ -484,7 +588,26 @@ function redirectToPage(type, message, event, name = null) {
         form.appendChild(nameInput);
     }
     
-    // Add error message (for error page)
+    if (hasSeat && tableName && chairNumber) {
+        const hasSeatInput = document.createElement('input');
+        hasSeatInput.type = 'hidden';
+        hasSeatInput.name = 'has_seat';
+        hasSeatInput.value = '1';
+        form.appendChild(hasSeatInput);
+        
+        const tableInput = document.createElement('input');
+        tableInput.type = 'hidden';
+        tableInput.name = 'table_name';
+        tableInput.value = tableName;
+        form.appendChild(tableInput);
+        
+        const chairInput = document.createElement('input');
+        chairInput.type = 'hidden';
+        chairInput.name = 'chair_number';
+        chairInput.value = chairNumber;
+        form.appendChild(chairInput);
+    }
+    
     if (message && type === 'error') {
         const messageInput = document.createElement('input');
         messageInput.type = 'hidden';
@@ -492,6 +615,13 @@ function redirectToPage(type, message, event, name = null) {
         messageInput.value = message;
         form.appendChild(messageInput);
     }
+    
+    // ADD THIS: Pass enable_rep_prompt parameter
+    const repPromptInput = document.createElement('input');
+    repPromptInput.type = 'hidden';
+    repPromptInput.name = 'enable_rep_prompt';
+    repPromptInput.value = enableRepPrompt;
+    form.appendChild(repPromptInput);
     
     document.body.appendChild(form);
     form.submit();
@@ -505,18 +635,12 @@ function showLoading(scanType) {
         if (!statusDiv) {
             statusDiv = document.createElement('div');
             statusDiv.id = 'rfid-status';
-            statusDiv.style.marginTop = '20px';
-            statusDiv.style.fontSize = '1.2rem';
-            statusDiv.style.fontWeight = 'bold';
             rfidDiv.appendChild(statusDiv);
         }
         
-        statusDiv.innerHTML = `<p style="color: #0d6efd;">Processing scan...</p>`;
+        statusDiv.innerHTML = `<p style="color: #667eea;">Processing scan...</p>`;
     } else {
-        document.getElementById('result').innerHTML = `
-            <h2>Scanning...</h2>
-            <p>Checking identifier...</p>
-        `;
+        document.getElementById('result').innerHTML = `<p>Processing scan...</p>`;
     }
 }
 
@@ -582,8 +706,18 @@ function startScanner() {
     });
 }
 
-// Initialize with NFC/RFID selected by default
+// Initialize with saved scan mode
 document.addEventListener("DOMContentLoaded", function() {
+    const switchElement = document.getElementById("switch");
+    
+    // Restore toggle state from session
+    if (lastScanMode === 'qr') {
+        switchElement.checked = true;
+    } else {
+        switchElement.checked = false;
+    }
+    
+    // Apply the saved state
     toggleDiv();
 });
 </script>

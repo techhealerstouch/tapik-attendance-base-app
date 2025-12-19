@@ -48,6 +48,14 @@ class Event extends Model
     }
 
     /**
+     * Event Tables relationship
+     */
+    public function tables()
+    {
+        return $this->hasMany(EventTable::class);
+    }
+
+    /**
      * Get food service status for a specific user
      * 
      * @param int $userId

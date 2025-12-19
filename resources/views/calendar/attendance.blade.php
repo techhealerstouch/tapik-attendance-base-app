@@ -255,10 +255,16 @@
 
 <style>
     .select2-container {
-        z-index: 9999 !important;
+        z-index: 1040 !important;
     }
     .select2-dropdown {
-        z-index: 10060 !important;
+        z-index: 1040 !important;
+    }
+    .modal {
+        z-index: 1055 !important;
+    }
+    .modal-backdrop {
+        z-index: 1050 !important;
     }
     .card-header {
         border-left: 4px solid #0d6efd;
