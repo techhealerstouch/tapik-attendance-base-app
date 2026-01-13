@@ -10,7 +10,7 @@ class ProfessionalInformation extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'title', 'company', 'location', 'email', 'mobile', 'role'
+        'user_id', 'title', 'company', 'location', 'email', 'mobile', 'role', 'country'
     ];
 
     // User

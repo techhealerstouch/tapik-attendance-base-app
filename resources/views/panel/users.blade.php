@@ -151,8 +151,9 @@
                 <div class="alert alert-info" role="alert">
                     <strong id="importTypeHelp">Individual Users:</strong>
                     <ul id="importTypeDetails" class="mb-0 mt-2">
-                        <li>Requires: name, primary_email_address</li>
-                        <li>Optional: title, company_name, address, mobile_number, website_url</li>
+                        <li>Requires: FIRST NAME, M.I. + LAST NAME, EMAIL ADDRESS</li>
+                        <li>Required: LOCAL POSITION, LGU, Province, REGION, CONTACT NO.</li>
+                        <li>Optional: Type of Membership, BIRTHDAY, website_url</li>
                         <li>Code prefix: <code>{{ $config['individual_prefix'] ?? 'nmyl' }}</code></li>
                     </ul>
                 </div>
@@ -186,7 +187,8 @@ const prefixConfig = {
     individual: '{{ $config['individual_prefix'] ?? 'nmyl' }}',
     company: '{{ $config['company_prefix'] ?? 'pt' }}'
 };
- document.getElementById('importType').addEventListener('change', function() {
+
+document.getElementById('importType').addEventListener('change', function() {
     const importType = this.value;
     const helpTitle = document.getElementById('importTypeHelp');
     const helpDetails = document.getElementById('importTypeDetails');
@@ -201,8 +203,9 @@ const prefixConfig = {
     } else {
         helpTitle.textContent = 'Individual Users:';
         helpDetails.innerHTML = `
-            <li>Requires: name, primary_email_address</li>
-            <li>Optional: title, company_name, address, mobile_number, website_url</li>
+            <li>Requires: FIRST NAME, M.I. + LAST NAME, EMAIL ADDRESS</li>
+            <li>Required: LOCAL POSITION, LGU, Province, REGION, CONTACT NO.</li>
+            <li>Optional: Type of Membership, BIRTHDAY, website_url</li>
             <li>Code prefix: <code>${prefixConfig.individual}</code></li>
         `;
     }

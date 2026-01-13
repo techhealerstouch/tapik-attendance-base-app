@@ -1002,7 +1002,6 @@ private function random_str(
     }
 
 
-// Add this method to your AdminController.php
 
 public function import_users(Request $request)
 {
@@ -1049,9 +1048,16 @@ public function import_users(Request $request)
             
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() === '23000') {
-                $duplicateEmailCount++;
-                $duplicateEmails[] = $userData['primary_email_address'];
-                Log::warning('Duplicate email detected: ' . $userData['primary_email_address']);
+            $duplicateEmailCount++;
+
+            $email = $userData['EMAILADDRESS']
+                ?? $userData['primary_email_address']
+                ?? null;
+
+            $duplicateEmails[] = $email;
+
+            Log::warning('Duplicate email detected: ' . ($email ?? 'N/A'));
+
             } else {
                 Log::error('An error occurred while creating a user: ' . $e->getMessage());
             }
@@ -1108,27 +1114,55 @@ private function createCompanyUser($userData, $randomCode)
 // Create individual user
 private function createIndividualUser($userData, $randomCode)
 {
+    // Normalize column names (trim spaces and handle variations)
+    $normalizedData = [];
+    foreach ($userData as $key => $value) {
+        $normalizedKey = trim($key);
+        $normalizedData[$normalizedKey] = $value;
+    }
+    
+    // Combine FIRST NAME and M.I. + LAST NAME
+    $fullName = trim(($normalizedData['FIRST NAME'] ?? '') . ' ' . ($normalizedData['M.I. + LAST NAME'] ?? ''));
+    
+    // Get email - check multiple possible column names
+    $email = $normalizedData['EMAIL ADDRESS'] ?? $normalizedData['Email Address'] ?? $normalizedData['email address'] ?? null;
+    
+    // If email is empty, N/A, or invalid, generate a placeholder
+    if (empty($email) || in_array(strtolower(trim($email)), ['n/a', 'null', 'none'])) {
+        // Generate unique email using activation code
+        $domain = parse_url(url(''), PHP_URL_HOST);
+        $domain = ($domain == 'localhost') ? 'example.com' : $domain;
+        $email = strtolower($randomCode) . '@' . $domain;
+    }
+    
     return User::create([
-        'name' => $userData['name'],
-        'email' => $userData['primary_email_address'],
+        'name' => $fullName,
+        'email' => $email,
         'password' => Hash::make('12345678'),
         'littlelink_name' => $randomCode,
-        'littlelink_description' => $userData['title'] ?? null,
-        'mobile_number' => $userData['mobile_number'] ?? $userData['telephone_number'] ?? null,
+        'littlelink_description' => $normalizedData['LOCAL POSITION'] ?? null,
+        'mobile_number' => $normalizedData['CONTACT NO.'] ?? null,
         'role' => 'user',
         'block' => 'no',
         'activate_code' => $randomCode,
         'activate_status' => 'activated',
-        'website' => $userData['website_url'] ?? null,
+        'website' => $normalizedData['website_url'] ?? null,
     ]);
 }
 
 // Add user links
 private function addUserLinks($userId, $userData)
 {
+    // Normalize column names (trim spaces and handle variations)
+    $normalizedData = [];
+    foreach ($userData as $key => $value) {
+        $normalizedKey = trim($key);
+        $normalizedData[$normalizedKey] = $value;
+    }
+    
     // Website link
-    if (isset($userData['website_url']) && !in_array(strtolower(trim($userData['website_url'])), ['n/a', 'null'])) {
-        $websiteUrl = trim($userData['website_url']);
+    if (isset($normalizedData['website_url']) && !in_array(strtolower(trim($normalizedData['website_url'])), ['n/a', 'null'])) {
+        $websiteUrl = trim($normalizedData['website_url']);
         if (!preg_match('/^https?:\/\//i', $websiteUrl)) {
             $websiteUrl = 'https://' . $websiteUrl;
         }
@@ -1143,9 +1177,10 @@ private function addUserLinks($userId, $userData)
         $links->save();
     }
 
-    // Mobile number link
-    if (!empty($userData['mobile_number'])) {
-        $numbers = preg_split('/[\/\,\s]+/', $userData['mobile_number']);
+    // Mobile number link - using new column name
+    $contactNo = $normalizedData['CONTACT NO.'] ?? null;
+    if (!empty($contactNo)) {
+        $numbers = preg_split('/[\/\,\s]+/', $contactNo);
 
         foreach ($numbers as $number) {
             $normalizedNumber = preg_replace('/[^\d+]/', '', $number);
@@ -1163,7 +1198,7 @@ private function addUserLinks($userId, $userData)
             if (!empty($normalizedNumber)) {
                 $links = new Link;
                 $links->user_id = $userId;
-                $links->title = $userData['mobile_number'];
+                $links->title = $contactNo;
                 $links->button_id = "44";
                 $links->link = 'tel:' . $normalizedNumber;
                 $links->save();
@@ -1174,13 +1209,14 @@ private function addUserLinks($userId, $userData)
         }
     }
 
-    // Email link
-    if (!empty($userData['primary_email_address'])) {
+    // Email link - using new column name
+    $email = $normalizedData['EMAIL ADDRESS'] ?? $normalizedData['Email Address'] ?? $normalizedData['email address'] ?? null;
+    if (!empty($email) && !in_array(strtolower(trim($email)), ['n/a', 'null', 'none'])) {
         $links = new Link;
         $links->user_id = $userId;
-        $links->title = $userData['primary_email_address'];
+        $links->title = $email;
         $links->button_id = "6";
-        $links->link = $userData['primary_email_address'];
+        $links->link = $email;
         $links->save();
         $links->order = ($links->id - 1);
         $links->save();
@@ -1205,118 +1241,244 @@ private function createCompanyProfessionalInfo($userId, $userData)
 // Create individual professional information
 private function createIndividualProfessionalInfo($userId, $userData)
 {
+    // Normalize column names (trim spaces and handle variations)
+    $normalizedData = [];
+    foreach ($userData as $key => $value) {
+        $normalizedKey = trim($key);
+        $normalizedData[$normalizedKey] = $value;
+    }
+    
+    // Combine LGU, Province and REGION
+    $location = trim(($normalizedData['LGU, Province'] ?? '') . ', ' . ($normalizedData['REGION'] ?? ''));
+    
+    // Get email - check multiple possible column names
+    $email = $normalizedData['EMAIL ADDRESS'] ?? $normalizedData['Email Address'] ?? $normalizedData['email address'] ?? null;
+    
     ProfessionalInformation::create([
         'user_id' => $userId,
-        'title' => $userData['title'] ?? null,
-        'company' => $userData['company_name'] ?? null,
-        'location' => $userData['address'] ?? null,
+        'title' => $normalizedData['LOCAL POSITION'] ?? null,
+        'company' => $normalizedData['company_name'] ?? null,
+        'location' => $location,
         'country' => 'Philippines',
-        'email' => $userData['primary_email_address'],
-        'mobile' => $userData['mobile_number'] ?? $userData['telephone_number'] ?? null,
-        'role' => null,
+        'email' => $email,
+        'mobile' => $normalizedData['CONTACT NO.'] ?? null,
+        'role' => $normalizedData['Type of Membership'] ?? null,
     ]);
 }
 
     public function generateQrCode(Request $request)
-    {
-        // Retrieve the first 50 users with qr_code_status = 0
-        ini_set('max_execution_time', '2400');
-        //ini_set('memory_limit', '3072M');
+{
+    // Retrieve the first 50 users with qr_code_status = 0
+    ini_set('max_execution_time', '2400');
+    //ini_set('memory_limit', '3072M');
 
-        $users = User::where('qr_code_status', '0')->take(299)->get();
+    $users = User::where('qr_code_status', '0')->take(299)->get();
 
-
-        // Check if users exist
-        if ($users->isEmpty()) {
-            return response()->json(['message' => 'No users found with deactivated status.'], 404);
-        }
-
-        // Create a new Spreadsheet
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-
-        // Set column headings
-        $sheet->setCellValue('A1', 'Code');
-        $sheet->setCellValue('B1', 'Url');
-        $sheet->setCellValue('C1', 'Name');
-        $sheet->setCellValue('D1', 'Email');
-        $sheet->setCellValue('E1', 'Address');
-        $sheet->setCellValue('F1', 'Mobile Number');
-        $sheet->setCellValue('G1', 'ID');
-        $sheet->setCellValue('H1', 'Website');
-        $sheet->setCellValue('I1', 'QR code');
-
-        $sheet->getColumnDimension('B')->setWidth(30);
-        $sheet->getColumnDimension('C')->setWidth(15);
-
-        $row = 2; // Start from the second row
-
-        foreach ($users as $user) {
-            $redirectURL = url('/u/' . $user->id);
-            $publicURL = url('/' . $user->activate_code);
-
-            $argValues = [0, 0, 0, 0, 0, 0, 'diagonal'];
-            list($arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $arg7) = $argValues;
-
-            try {
-                // Generate QR code
-                if (extension_loaded('imagick')) {
-                    $imgSrc = QrCode::format('png')
-                        ->color(41, 55, 123) // Dark blue background
-                        ->backgroundColor(255, 255, 255)         // White foreground
-                        ->margin(1)
-                        ->eye('circle')
-                        ->style('round')
-                        ->size(300)
-                        ->generate($redirectURL);
-                    $imgSrc = base64_encode($imgSrc);
-                    $imgSrc = 'data:image/png;base64,' . $imgSrc;
-                } else {
-                    $imgSrc = QrCode::gradient($arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $arg7)
-                        ->eye('circle')
-                        ->style('round')
-                        ->size(300)
-                        ->generate($redirectURL);
-                    $imgSrc = base64_encode($imgSrc);
-                    $imgSrc = 'data:image/svg+xml;base64,' . $imgSrc;
-                }
-                $sheet->getRowDimension($row)->setRowHeight(76);
-                // Add data to the spreadsheet
-                $sheet->setCellValue('A' . $row, $user->activate_code);
-                $sheet->setCellValue('B' . $row, $publicURL);
-                $sheet->setCellValue('C' . $row, $user->name);
-                $sheet->setCellValue('D' . $row, $user->email);
-                $sheet->setCellValue('E' . $row, $user->littlelink_description);
-                $sheet->setCellValue('F' . $row, $user->mobile_number);
-                $sheet->setCellValue('G' . $row, $user->id);
-                $sheet->setCellValue('H' . $row, $user->website);
-
-                // Decode the base64 string and create a QR code image resource
-                $qrImage = imagecreatefromstring(base64_decode(explode(',', $imgSrc)[1]));
-
-                // Create a MemoryDrawing object to insert the image into the spreadsheet
-                $drawing = new MemoryDrawing();
-                $drawing->setImageResource($qrImage);
-                $drawing->setCoordinates('I' . $row);
-                $drawing->setHeight(100);
-                $drawing->setWorksheet($sheet);
-
-                $row++;
-            } catch (Exception $e) {
-                // Log the error if needed
-                continue;
-            }
-        }
-
-        // Save the spreadsheet to a file
-        $writer = new Xlsx($spreadsheet);
-        $fileName = 'QR_Codes___' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-        $filePath = storage_path("app/{$fileName}");
-
-
-        $writer->save($filePath);
-        User::whereIn('id', $users->pluck('id'))->update(['qr_code_status' => 1]);
-        // Return the file as a download response
-        return response()->download($filePath)->deleteFileAfterSend(false);
+    // Check if users exist
+    if ($users->isEmpty()) {
+        return response()->json(['message' => 'No users found with deactivated status.'], 404);
     }
+
+    // Create a new Spreadsheet
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Set column headings
+    $sheet->setCellValue('A1', 'Code');
+    $sheet->setCellValue('B1', 'Url');
+    $sheet->setCellValue('C1', 'Name');
+    $sheet->setCellValue('D1', 'Email');
+    $sheet->setCellValue('E1', 'Title');
+    $sheet->setCellValue('F1', 'Location'); // New column
+    $sheet->setCellValue('G1', 'Mobile Number');
+    $sheet->setCellValue('H1', 'ID');
+    $sheet->setCellValue('I1', 'Website');
+    $sheet->setCellValue('J1', 'QR code'); // Moved to column J
+
+    $sheet->getColumnDimension('B')->setWidth(30);
+    $sheet->getColumnDimension('C')->setWidth(15);
+    $sheet->getColumnDimension('F')->setWidth(25); // Set width for Location column
+
+    $row = 2; // Start from the second row
+
+    foreach ($users as $user) {
+        $redirectURL = url('/u/' . $user->id);
+        $publicURL = url('/' . $user->activate_code);
+
+        // Get professional information for the user
+        $professionalInfo = ProfessionalInformation::where('user_id', $user->id)->first();
+        $location = $professionalInfo ? $professionalInfo->location : '';
+
+        $argValues = [0, 0, 0, 0, 0, 0, 'diagonal'];
+        list($arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $arg7) = $argValues;
+
+        try {
+            // Generate QR code
+            if (extension_loaded('imagick')) {
+                $imgSrc = QrCode::format('png')
+                    ->color(41, 55, 123) // Dark blue background
+                    ->backgroundColor(255, 255, 255)         // White foreground
+                    ->margin(1)
+                    ->eye('circle')
+                    ->style('round')
+                    ->size(300)
+                    ->generate($redirectURL);
+                $imgSrc = base64_encode($imgSrc);
+                $imgSrc = 'data:image/png;base64,' . $imgSrc;
+            } else {
+                $imgSrc = QrCode::gradient($arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $arg7)
+                    ->eye('circle')
+                    ->style('round')
+                    ->size(300)
+                    ->generate($redirectURL);
+                $imgSrc = base64_encode($imgSrc);
+                $imgSrc = 'data:image/svg+xml;base64,' . $imgSrc;
+            }
+            $sheet->getRowDimension($row)->setRowHeight(76);
+            
+            // Add data to the spreadsheet
+            $sheet->setCellValue('A' . $row, $user->activate_code);
+            $sheet->setCellValue('B' . $row, $publicURL);
+            $sheet->setCellValue('C' . $row, $user->name);
+            $sheet->setCellValue('D' . $row, $user->email);
+            $sheet->setCellValue('E' . $row, $user->littlelink_description);
+            $sheet->setCellValue('F' . $row, $location); // Add location
+            $sheet->setCellValue('G' . $row, $user->mobile_number);
+            $sheet->setCellValue('H' . $row, $user->id);
+            $sheet->setCellValue('I' . $row, $user->website);
+
+            // Decode the base64 string and create a QR code image resource
+            $qrImage = imagecreatefromstring(base64_decode(explode(',', $imgSrc)[1]));
+
+            // Create a MemoryDrawing object to insert the image into the spreadsheet
+            $drawing = new MemoryDrawing();
+            $drawing->setImageResource($qrImage);
+            $drawing->setCoordinates('J' . $row); // Changed to column J
+            $drawing->setHeight(100);
+            $drawing->setWorksheet($sheet);
+
+            $row++;
+        } catch (Exception $e) {
+            // Log the error if needed
+            continue;
+        }
+    }
+
+    // Save the spreadsheet to a file
+    $writer = new Xlsx($spreadsheet);
+    $fileName = 'QR_Codes___' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+    $filePath = storage_path("app/{$fileName}");
+
+    $writer->save($filePath);
+    User::whereIn('id', $users->pluck('id'))->update(['qr_code_status' => 1]);
+    
+    // Return the file as a download response
+    return response()->download($filePath)->deleteFileAfterSend(false);
 }
+
+    //OLD generate QR code for Philtoa
+    //     public function generateQrCode(Request $request)
+    // {
+    //     // Retrieve the first 50 users with qr_code_status = 0
+    //     ini_set('max_execution_time', '2400');
+    //     //ini_set('memory_limit', '3072M');
+
+    //     $users = User::where('qr_code_status', '0')->take(299)->get();
+
+
+    //     // Check if users exist
+    //     if ($users->isEmpty()) {
+    //         return response()->json(['message' => 'No users found with deactivated status.'], 404);
+    //     }
+
+    //     // Create a new Spreadsheet
+    //     $spreadsheet = new Spreadsheet();
+    //     $sheet = $spreadsheet->getActiveSheet();
+
+    //     // Set column headings
+    //     $sheet->setCellValue('A1', 'Code');
+    //     $sheet->setCellValue('B1', 'Url');
+    //     $sheet->setCellValue('C1', 'Name');
+    //     $sheet->setCellValue('D1', 'Email');
+    //     $sheet->setCellValue('E1', 'Address');
+    //     $sheet->setCellValue('F1', 'Mobile Number');
+    //     $sheet->setCellValue('G1', 'ID');
+    //     $sheet->setCellValue('H1', 'Website');
+    //     $sheet->setCellValue('I1', 'QR code');
+
+    //     $sheet->getColumnDimension('B')->setWidth(30);
+    //     $sheet->getColumnDimension('C')->setWidth(15);
+
+    //     $row = 2; // Start from the second row
+
+    //     foreach ($users as $user) {
+    //         $redirectURL = url('/u/' . $user->id);
+    //         $publicURL = url('/' . $user->activate_code);
+
+    //         $argValues = [0, 0, 0, 0, 0, 0, 'diagonal'];
+    //         list($arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $arg7) = $argValues;
+
+    //         try {
+    //             // Generate QR code
+    //             if (extension_loaded('imagick')) {
+    //                 $imgSrc = QrCode::format('png')
+    //                     ->color(41, 55, 123) // Dark blue background
+    //                     ->backgroundColor(255, 255, 255)         // White foreground
+    //                     ->margin(1)
+    //                     ->eye('circle')
+    //                     ->style('round')
+    //                     ->size(300)
+    //                     ->generate($redirectURL);
+    //                 $imgSrc = base64_encode($imgSrc);
+    //                 $imgSrc = 'data:image/png;base64,' . $imgSrc;
+    //             } else {
+    //                 $imgSrc = QrCode::gradient($arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $arg7)
+    //                     ->eye('circle')
+    //                     ->style('round')
+    //                     ->size(300)
+    //                     ->generate($redirectURL);
+    //                 $imgSrc = base64_encode($imgSrc);
+    //                 $imgSrc = 'data:image/svg+xml;base64,' . $imgSrc;
+    //             }
+    //             $sheet->getRowDimension($row)->setRowHeight(76);
+    //             // Add data to the spreadsheet
+    //             $sheet->setCellValue('A' . $row, $user->activate_code);
+    //             $sheet->setCellValue('B' . $row, $publicURL);
+    //             $sheet->setCellValue('C' . $row, $user->name);
+    //             $sheet->setCellValue('D' . $row, $user->email);
+    //             $sheet->setCellValue('E' . $row, $user->littlelink_description);
+    //             $sheet->setCellValue('F' . $row, $user->mobile_number);
+    //             $sheet->setCellValue('G' . $row, $user->id);
+    //             $sheet->setCellValue('H' . $row, $user->website);
+
+    //             // Decode the base64 string and create a QR code image resource
+    //             $qrImage = imagecreatefromstring(base64_decode(explode(',', $imgSrc)[1]));
+
+    //             // Create a MemoryDrawing object to insert the image into the spreadsheet
+    //             $drawing = new MemoryDrawing();
+    //             $drawing->setImageResource($qrImage);
+    //             $drawing->setCoordinates('I' . $row);
+    //             $drawing->setHeight(100);
+    //             $drawing->setWorksheet($sheet);
+
+    //             $row++;
+    //         } catch (Exception $e) {
+    //             // Log the error if needed
+    //             continue;
+    //         }
+    //     }
+
+    //     // Save the spreadsheet to a file
+    //     $writer = new Xlsx($spreadsheet);
+    //     $fileName = 'QR_Codes___' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+    //     $filePath = storage_path("app/{$fileName}");
+
+
+    //     $writer->save($filePath);
+    //     User::whereIn('id', $users->pluck('id'))->update(['qr_code_status' => 1]);
+    //     // Return the file as a download response
+    //     return response()->download($filePath)->deleteFileAfterSend(false);
+    // }
+}
+
+
