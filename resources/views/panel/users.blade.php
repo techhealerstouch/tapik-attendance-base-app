@@ -43,22 +43,66 @@
                                             <button type="button" class="btn btn-primary mx-2" data-bs-toggle="modal" data-bs-target="#importUsersModal">
                                                 <i class="bi bi-cloud-upload"></i> Import Users
                                             </button>
-                                            <button type="button" class="btn btn-primary" id="downloadUnsetUsers">
-                                                <i class="bi bi-cloud-download"></i> Export Users
+                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exportUsersModal">
+                                                <i class="bi bi-cloud-download"></i> Export
                                             </button>
                                         </div>
-                                        <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
+
+                                        <!-- Loading Modal -->
+                                        <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
                                             <div class="modal-dialog modal-dialog-centered">
-                                              <div class="modal-content">
-                                                <div class="modal-body text-center">
-                                                  <div class="spinner-border text-primary" role="status">
-                                                    <span class="visually-hidden">Loading...</span>
-                                                  </div>
-                                                  <p id="loadingText" class="mt-3">Processing your request, please wait...</p>
+                                                <div class="modal-content">
+                                                    <div class="modal-body text-center">
+                                                        <div id="loadingSpinner" class="spinner-border text-primary" role="status">
+                                                            <span class="visually-hidden">Loading...</span>
+                                                        </div>
+                                                        <div id="loadingIcon" class="d-none">
+                                                            <i class="bi fs-1" id="statusIcon"></i>
+                                                        </div>
+                                                        <p id="loadingText" class="mt-3">Processing your request, please wait...</p>
+                                                        <button type="button" class="btn btn-primary mt-3 d-none" id="closeLoadingBtn" data-bs-dismiss="modal">Close</button>
+                                                    </div>
                                                 </div>
-                                              </div>
                                             </div>
-                                          </div>
+                                        </div>
+
+                                        <!-- Export Users Modal -->
+                                        <div class="modal fade" id="exportUsersModal" tabindex="-1" aria-labelledby="exportUsersModalLabel" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="exportUsersModalLabel">
+                                                            <i class="bi bi-cloud-download"></i> Export Options
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="d-grid gap-3">
+                                                            <button type="button" class="btn btn-primary btn-lg" id="exportQRCodes">
+                                                                <i class="bi bi-qr-code"></i> Export QR Codes
+                                                                <br>
+                                                                <small class="d-block mt-2 text-white-50">Download Excel file with QR codes for user profiles</small>
+                                                            </button>
+                                                            
+                                                            <button type="button" class="btn btn-success btn-lg" id="exportUserCredentials">
+                                                                <i class="bi bi-file-earmark-spreadsheet"></i> Export User Credentials
+                                                                <br>
+                                                                <small class="d-block mt-2 text-white-50">Download Excel file with user credentials (Name, Email, Password, URL)</small>
+                                                            </button>
+                                                        </div>
+                                                        
+                                                        <div class="alert alert-info mt-3" role="alert">
+                                                            <i class="bi bi-info-circle"></i> 
+                                                            <strong>Note:</strong> Both exports will generate Excel (.xlsx) files. Please wait for the download to complete.
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <livewire:user-table />
 
                                         <!-- Create Users Modal -->
@@ -122,94 +166,242 @@
                                         </div>
 
                                         <!-- Import Users Modal -->
-<div class="modal fade" id="importUsersModal" tabindex="-1" aria-labelledby="importUsersModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="importUsersModalLabel">
-                    <i class="bi bi-cloud-upload"></i> Import Users
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="importType" class="form-label">
-                        Import Type
-                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" 
-                           title="Select whether you're importing individual users or company profiles"></i>
-                    </label>
-                    <select class="form-select" id="importType">
-                        <option value="individual" selected>
-                            Individual Users ({{ $config['individual_prefix'] ?? 'nmyl' }} prefix)
-                        </option>
-                        <option value="company">
-                            Company Profiles ({{ $config['company_prefix'] ?? 'pt' }} prefix)
-                        </option>
-                    </select>
-                </div>
-                
-                <div class="alert alert-info" role="alert">
-                    <strong id="importTypeHelp">Individual Users:</strong>
-                    <ul id="importTypeDetails" class="mb-0 mt-2">
-                        <li>Requires: FIRST NAME, M.I. + LAST NAME, EMAIL ADDRESS</li>
-                        <li>Required: LOCAL POSITION, LGU, Province, REGION, CONTACT NO.</li>
-                        <li>Optional: Type of Membership, BIRTHDAY, website_url</li>
-                        <li>Code prefix: <code>{{ $config['individual_prefix'] ?? 'nmyl' }}</code></li>
-                    </ul>
-                </div>
+                                        <div class="modal fade" id="importUsersModal" tabindex="-1" aria-labelledby="importUsersModalLabel" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="importUsersModalLabel">
+                                                            <i class="bi bi-cloud-upload"></i> Import Users
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label for="importType" class="form-label">
+                                                                Import Type
+                                                                <i class="bi bi-info-circle" data-bs-toggle="tooltip" 
+                                                                   title="Select whether you're importing individual users or company profiles"></i>
+                                                            </label>
+                                                            <select class="form-select" id="importType">
+                                                                <option value="individual" selected>
+                                                                    Individual Users ({{ $config['individual_prefix'] ?? 'nmyl' }} prefix)
+                                                                </option>
+                                                                <option value="company">
+                                                                    Company Profiles ({{ $config['company_prefix'] ?? 'pt' }} prefix)
+                                                                </option>
+                                                            </select>
+                                                        </div>
+                                                        
+                                                        <div class="alert alert-info" role="alert">
+                                                            <strong id="importTypeHelp">Individual Users:</strong>
+                                                            <ul id="importTypeDetails" class="mb-0 mt-2">
+                                                                <li>Requires: FIRST NAME, M.I. + LAST NAME, EMAIL ADDRESS</li>
+                                                                <li>Required: LOCAL POSITION, LGU, Province, REGION, CONTACT NO.</li>
+                                                                <li>Optional: Type of Membership, BIRTHDAY, website_url</li>
+                                                                <li>Code prefix: <code>{{ $config['individual_prefix'] ?? 'nmyl' }}</code></li>
+                                                            </ul>
+                                                        </div>
 
-                <div class="mb-3">
-                    <label for="userFile" class="form-label">Choose File (CSV or XLSX)</label>
-                    <input type="file" class="form-control" id="userFile" accept=".xlsx,.csv">
-                </div>
-                <div id="filePreview" class="mt-3"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="processFile" class="btn btn-primary">
-                    <i class="bi bi-upload"></i> Import
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+                                                        <div class="mb-3">
+                                                            <label for="userFile" class="form-label">Choose File (CSV or XLSX)</label>
+                                                            <input type="file" class="form-control" id="userFile" accept=".xlsx,.csv">
+                                                        </div>
+                                                        <div id="filePreview" class="mt-3"></div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" id="processFile" class="btn btn-primary">
+                                                            <i class="bi bi-upload"></i> Import
+                                                        </button>
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
                                         <script type="text/javascript">
-                                            // Initialize tooltips
+                                            // Initialize tooltips and export handlers
                                             document.addEventListener('DOMContentLoaded', function() {
                                                 var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                                                 var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                                                     return new bootstrap.Tooltip(tooltipTriggerEl);
                                                 });
-                                            });
-const prefixConfig = {
-    individual: '{{ $config['individual_prefix'] ?? 'nmyl' }}',
-    company: '{{ $config['company_prefix'] ?? 'pt' }}'
-};
 
-document.getElementById('importType').addEventListener('change', function() {
-    const importType = this.value;
-    const helpTitle = document.getElementById('importTypeHelp');
-    const helpDetails = document.getElementById('importTypeDetails');
-    
-    if (importType === 'company') {
-        helpTitle.textContent = 'Company Profiles:';
-        helpDetails.innerHTML = `
-            <li>Requires: company_name, primary_email_address</li>
-            <li>Optional: office_address_main, mobile_number, telephone_number, website_url</li>
-            <li>Code prefix: <code>${prefixConfig.company}</code></li>
-        `;
-    } else {
-        helpTitle.textContent = 'Individual Users:';
-        helpDetails.innerHTML = `
-            <li>Requires: FIRST NAME, M.I. + LAST NAME, EMAIL ADDRESS</li>
-            <li>Required: LOCAL POSITION, LGU, Province, REGION, CONTACT NO.</li>
-            <li>Optional: Type of Membership, BIRTHDAY, website_url</li>
-            <li>Code prefix: <code>${prefixConfig.individual}</code></li>
-        `;
-    }
-});
+                                                // Export QR Codes handler
+                                                $('#exportQRCodes').on('click', function() {
+                                                    var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+                                                    var loadingText = document.getElementById('loadingText');
+                                                    var loadingSpinner = document.getElementById('loadingSpinner');
+                                                    var loadingIcon = document.getElementById('loadingIcon');
+                                                    var statusIcon = document.getElementById('statusIcon');
+                                                    var closeBtn = document.getElementById('closeLoadingBtn');
+                                                    
+                                                    $('#exportUsersModal').modal('hide');
+                                                    
+                                                    // Reset modal state
+                                                    loadingSpinner.classList.remove('d-none');
+                                                    loadingIcon.classList.add('d-none');
+                                                    closeBtn.classList.add('d-none');
+                                                    loadingText.textContent = "Generating QR codes, please wait...";
+                                                    
+                                                    loadingModal.show();
+
+                                                    $.ajax({
+                                                        url: '/generate-qr-code',
+                                                        method: 'POST',
+                                                        data: {
+                                                            _token: '{{ csrf_token() }}'
+                                                        },
+                                                        xhrFields: {
+                                                            responseType: 'blob'
+                                                        },
+                                                        success: function(response) {
+                                                            // Hide spinner, show success icon
+                                                            loadingSpinner.classList.add('d-none');
+                                                            loadingIcon.classList.remove('d-none');
+                                                            statusIcon.className = 'bi bi-check-circle-fill text-success fs-1';
+                                                            loadingText.textContent = "QR codes generated successfully! Download will start shortly...";
+                                                            closeBtn.classList.remove('d-none');
+
+                                                            var url = URL.createObjectURL(response);
+                                                            var today = new Date();
+                                                            var dateString = today.getFullYear() + '-' + 
+                                                                ('0' + (today.getMonth() + 1)).slice(-2) + '-' + 
+                                                                ('0' + today.getDate()).slice(-2);
+
+                                                            var filename = 'QR_Codes_' + dateString + '.xlsx';
+
+                                                            var link = document.createElement('a');
+                                                            link.href = url;
+                                                            link.download = filename;
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+
+                                                            URL.revokeObjectURL(url);
+                                                        },
+                                                        error: function(xhr, status, error) {
+                                                            // Hide spinner, show error icon
+                                                            loadingSpinner.classList.add('d-none');
+                                                            loadingIcon.classList.remove('d-none');
+                                                            statusIcon.className = 'bi bi-x-circle-fill text-danger fs-1';
+                                                            
+                                                            var errorMessage = 'An error occurred while generating the QR codes.';
+                                                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                                                errorMessage = xhr.responseJSON.message;
+                                                            } else if (xhr.status === 404) {
+                                                                errorMessage = 'No users found to generate QR codes.';
+                                                            } else if (xhr.status === 500) {
+                                                                errorMessage = 'Server error occurred. Please try again later.';
+                                                            }
+                                                            
+                                                            loadingText.textContent = errorMessage;
+                                                            closeBtn.classList.remove('d-none');
+                                                        }
+                                                    });
+                                                });
+
+                                                // Export User Credentials handler
+                                                $('#exportUserCredentials').on('click', function() {
+                                                    var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+                                                    var loadingText = document.getElementById('loadingText');
+                                                    var loadingSpinner = document.getElementById('loadingSpinner');
+                                                    var loadingIcon = document.getElementById('loadingIcon');
+                                                    var statusIcon = document.getElementById('statusIcon');
+                                                    var closeBtn = document.getElementById('closeLoadingBtn');
+                                                    
+                                                    $('#exportUsersModal').modal('hide');
+                                                    
+                                                    // Reset modal state
+                                                    loadingSpinner.classList.remove('d-none');
+                                                    loadingIcon.classList.add('d-none');
+                                                    closeBtn.classList.add('d-none');
+                                                    loadingText.textContent = "Generating user credentials export, please wait...";
+                                                    
+                                                    loadingModal.show();
+
+                                                    $.ajax({
+                                                        url: '/export-user-credentials',
+                                                        method: 'POST',
+                                                        data: {
+                                                            _token: '{{ csrf_token() }}'
+                                                        },
+                                                        xhrFields: {
+                                                            responseType: 'blob'
+                                                        },
+                                                        success: function(response) {
+                                                            // Hide spinner, show success icon
+                                                            loadingSpinner.classList.add('d-none');
+                                                            loadingIcon.classList.remove('d-none');
+                                                            statusIcon.className = 'bi bi-check-circle-fill text-success fs-1';
+                                                            loadingText.textContent = "User credentials exported successfully! Download will start shortly...";
+                                                            closeBtn.classList.remove('d-none');
+
+                                                            var url = URL.createObjectURL(response);
+                                                            var today = new Date();
+                                                            var dateString = today.getFullYear() + '-' + 
+                                                                ('0' + (today.getMonth() + 1)).slice(-2) + '-' + 
+                                                                ('0' + today.getDate()).slice(-2);
+
+                                                            var filename = 'User_Credentials_' + dateString + '.xlsx';
+
+                                                            var link = document.createElement('a');
+                                                            link.href = url;
+                                                            link.download = filename;
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+
+                                                            URL.revokeObjectURL(url);
+                                                        },
+                                                        error: function(xhr, status, error) {
+                                                            // Hide spinner, show error icon
+                                                            loadingSpinner.classList.add('d-none');
+                                                            loadingIcon.classList.remove('d-none');
+                                                            statusIcon.className = 'bi bi-x-circle-fill text-danger fs-1';
+                                                            
+                                                            var errorMessage = 'An error occurred while generating the user credentials export.';
+                                                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                                                errorMessage = xhr.responseJSON.message;
+                                                            } else if (xhr.status === 404) {
+                                                                errorMessage = 'No users found to export.';
+                                                            } else if (xhr.status === 500) {
+                                                                errorMessage = 'Server error occurred. Please try again later.';
+                                                            }
+                                                            
+                                                            loadingText.textContent = errorMessage;
+                                                            closeBtn.classList.remove('d-none');
+                                                        }
+                                                    });
+                                                });
+                                            });
+
+                                            const prefixConfig = {
+                                                individual: '{{ $config['individual_prefix'] ?? 'nmyl' }}',
+                                                company: '{{ $config['company_prefix'] ?? 'pt' }}'
+                                            };
+
+                                            document.getElementById('importType').addEventListener('change', function() {
+                                                const importType = this.value;
+                                                const helpTitle = document.getElementById('importTypeHelp');
+                                                const helpDetails = document.getElementById('importTypeDetails');
+                                                
+                                                if (importType === 'company') {
+                                                    helpTitle.textContent = 'Company Profiles:';
+                                                    helpDetails.innerHTML = `
+                                                        <li>Requires: company_name, primary_email_address</li>
+                                                        <li>Optional: office_address_main, mobile_number, telephone_number, website_url</li>
+                                                        <li>Code prefix: <code>${prefixConfig.company}</code></li>
+                                                    `;
+                                                } else {
+                                                    helpTitle.textContent = 'Individual Users:';
+                                                    helpDetails.innerHTML = `
+                                                        <li>Requires: FIRST NAME, M.I. + LAST NAME, EMAIL ADDRESS</li>
+                                                        <li>Required: LOCAL POSITION, LGU, Province, REGION, CONTACT NO.</li>
+                                                        <li>Optional: Type of Membership, BIRTHDAY, website_url</li>
+                                                        <li>Code prefix: <code>${prefixConfig.individual}</code></li>
+                                                    `;
+                                                }
+                                            });
 
                                             // Function to confirm and delete users
                                             var confirmIt = function(e) {
@@ -275,7 +467,6 @@ document.getElementById('importType').addEventListener('change', function() {
                                             attachClickEventListeners('user-block', handleUserClick);
                                             attachClickEventListeners('user-status', handleUserClick);
 
-
                                             let parsedData = [];
 
                                             document.getElementById('processFile').addEventListener('click', () => {
@@ -322,94 +513,48 @@ document.getElementById('importType').addEventListener('change', function() {
                                             }
 
                                             function uploadData() {
-    const filePreviewDiv = document.getElementById('filePreview');
-    const importType = document.getElementById('importType').value;
-    const prefix = prefixConfig[importType];
+                                                const filePreviewDiv = document.getElementById('filePreview');
+                                                const importType = document.getElementById('importType').value;
+                                                const prefix = prefixConfig[importType];
 
-    const loadingMessage = document.createElement('div');
-    loadingMessage.textContent = `Importing ${importType} users with prefix "${prefix}"...`;
-    loadingMessage.id = 'loading-message';
-    loadingMessage.style.backgroundColor = '#f8f9fa';
-    loadingMessage.style.color = '#6c757d';
-    loadingMessage.style.padding = '10px';
-    loadingMessage.style.borderRadius = '5px';
-    loadingMessage.style.fontSize = '14px';
-    loadingMessage.style.marginTop = '10px';
-    filePreviewDiv.appendChild(loadingMessage);
+                                                const loadingMessage = document.createElement('div');
+                                                loadingMessage.textContent = `Importing ${importType} users with prefix "${prefix}"...`;
+                                                loadingMessage.id = 'loading-message';
+                                                loadingMessage.style.backgroundColor = '#f8f9fa';
+                                                loadingMessage.style.color = '#6c757d';
+                                                loadingMessage.style.padding = '10px';
+                                                loadingMessage.style.borderRadius = '5px';
+                                                loadingMessage.style.fontSize = '14px';
+                                                loadingMessage.style.marginTop = '10px';
+                                                filePreviewDiv.appendChild(loadingMessage);
 
-    fetch('{{ route('importUsers') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-        },
-        body: JSON.stringify({
-            users: parsedData,
-            import_type: importType
-        }),
-    })
-    .then((response) => response.json())
-    .then((data) => {
-        alert(data.message);
-        location.reload();
-    })
-    .catch((error) => {
-        console.error('Error uploading data:', error);
-        alert('Failed to upload data.');
-    })
-    .finally(() => {
-        const loadingMessage = document.getElementById('loading-message');
-        if (loadingMessage) {
-            loadingMessage.remove();
-        }
-    });
-}
-
-                                            document.addEventListener('DOMContentLoaded', function() {
-                                                $('#downloadUnsetUsers').on('click', function() {
-                                                    var button = $(this);
-                                                    var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-                                                    var loadingText = document.getElementById('loadingText');
-
-                                                    loadingModal.show();
-                                                    loadingText.textContent = "Processing your request, please wait...";
-
-                                                    $.ajax({
-                                                        url: '/generate-qr-code',
-                                                        method: 'POST',
-                                                        data: {
-                                                            _token: '{{ csrf_token() }}'
-                                                        },
-                                                        xhrFields: {
-                                                            responseType: 'blob'
-                                                        },
-                                                        success: function(response) {
-                                                            loadingModal.hide();
-
-                                                            var url = URL.createObjectURL(response);
-                                                            var today = new Date();
-                                                            var dateString = today.getFullYear() + '-' + 
-                                                                ('0' + (today.getMonth() + 1)).slice(-2) + '-' + 
-                                                                ('0' + today.getDate()).slice(-2);
-
-                                                            var filename = 'QR_Codes_' + dateString + '.xlsx';
-
-                                                            var link = document.createElement('a');
-                                                            link.href = url;
-                                                            link.download = filename;
-                                                            document.body.appendChild(link);
-                                                            link.click();
-                                                            document.body.removeChild(link);
-
-                                                            URL.revokeObjectURL(url);
-                                                        },
-                                                        error: function() {
-                                                            loadingModal.hide();
-                                                            alert('An error occurred while generating the QR codes.');
-                                                        }
-                                                    });
+                                                fetch('{{ route('importUsers') }}', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                                    },
+                                                    body: JSON.stringify({
+                                                        users: parsedData,
+                                                        import_type: importType
+                                                    }),
+                                                })
+                                                .then((response) => response.json())
+                                                .then((data) => {
+                                                    alert(data.message);
+                                                    location.reload();
+                                                })
+                                                .catch((error) => {
+                                                    console.error('Error uploading data:', error);
+                                                    alert('Failed to upload data.');
+                                                })
+                                                .finally(() => {
+                                                    const loadingMessage = document.getElementById('loading-message');
+                                                    if (loadingMessage) {
+                                                        loadingMessage.remove();
+                                                    }
                                                 });
-                                            });
+                                            }
                                         </script>
                                     </div>
                                 </section>

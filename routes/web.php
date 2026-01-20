@@ -245,6 +245,7 @@ Route::group([
     Route::get('/admin/config', [AdminController::class, 'showConfig'])->name('showConfig');
     Route::post('/admin/config', [AdminController::class, 'editConfig'])->name('editConfig');
     Route::post('/generate-qr-code', [AdminController::class, 'generateQrCode']);
+    Route::post('/export-user-credentials', [AdminController::class, 'exportUserCredentials']);
     //Tickets
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
 

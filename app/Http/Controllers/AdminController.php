@@ -1479,6 +1479,74 @@ private function createIndividualProfessionalInfo($userId, $userData)
     //     // Return the file as a download response
     //     return response()->download($filePath)->deleteFileAfterSend(false);
     // }
+
+    // Add this method to your AdminController class
+public function exportUserCredentials(Request $request)
+{
+    ini_set('max_execution_time', '2400');
+
+    // Get all users
+    $users = User::where('id', '!=', 1)->get();
+
+    // Check if users exist
+    if ($users->isEmpty()) {
+        return response()->json(['message' => 'No users found.'], 404);
+    }
+
+    // Create a new Spreadsheet
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Set column headings
+    $sheet->setCellValue('A1', 'Name');
+    $sheet->setCellValue('B1', 'Email');
+    $sheet->setCellValue('C1', 'Password');
+    $sheet->setCellValue('D1', 'URL');
+
+    // Style the header row
+    $headerStyle = [
+        'font' => [
+            'bold' => true,
+            'size' => 12,
+        ],
+        'fill' => [
+            'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+            'startColor' => ['rgb' => 'E2E8F0'],
+        ],
+    ];
+    $sheet->getStyle('A1:D1')->applyFromArray($headerStyle);
+
+    // Set column widths
+    $sheet->getColumnDimension('A')->setWidth(25);
+    $sheet->getColumnDimension('B')->setWidth(30);
+    $sheet->getColumnDimension('C')->setWidth(15);
+    $sheet->getColumnDimension('D')->setWidth(40);
+
+    $row = 2; // Start from the second row
+
+    foreach ($users as $user) {
+        // Generate the public URL
+        $publicURL = url('/' . $user->activate_code);
+
+        // Add data to the spreadsheet
+        $sheet->setCellValue('A' . $row, $user->name);
+        $sheet->setCellValue('B' . $row, $user->email);
+        $sheet->setCellValue('C' . $row, '12345678'); // Default password
+        $sheet->setCellValue('D' . $row, $publicURL);
+
+        $row++;
+    }
+
+    // Save the spreadsheet to a file
+    $writer = new Xlsx($spreadsheet);
+    $fileName = 'User_Credentials_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+    $filePath = storage_path("app/{$fileName}");
+
+    $writer->save($filePath);
+
+    // Return the file as a download response
+    return response()->download($filePath)->deleteFileAfterSend(true);
+}
 }
 
 
