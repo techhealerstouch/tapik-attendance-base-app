@@ -66,7 +66,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
         'rfid_no',
 
-        'qr_code_status'
+        'qr_code_status',
+        'credentials_export',
 
     ];
 

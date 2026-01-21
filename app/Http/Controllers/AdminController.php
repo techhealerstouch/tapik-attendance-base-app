@@ -1048,16 +1048,17 @@ public function import_users(Request $request)
             
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() === '23000') {
-            $duplicateEmailCount++;
+                $duplicateEmailCount++;
 
-            $email = $userData['EMAILADDRESS']
-                ?? $userData['primary_email_address']
-                ?? null;
+                $email = $userData['EMAIL ADDRESS']  // Changed: Added space
+                    ?? $userData['Email Address']     // Added: Alternative casing
+                    ?? $userData['email address']     // Added: Another alternative
+                    ?? $userData['primary_email_address']  // For company imports
+                    ?? null;
 
-            $duplicateEmails[] = $email;
+                $duplicateEmails[] = $email;
 
-            Log::warning('Duplicate email detected: ' . ($email ?? 'N/A'));
-
+                Log::warning('Duplicate email detected: ' . ($email ?? 'N/A'));
             } else {
                 Log::error('An error occurred while creating a user: ' . $e->getMessage());
             }
@@ -1485,8 +1486,10 @@ public function exportUserCredentials(Request $request)
 {
     ini_set('max_execution_time', '2400');
 
-    // Get all users
-    $users = User::where('id', '!=', 1)->get();
+    // Get all users where id != 1 and credentials_export = 0
+    $users = User::where('id', '!=', 1)
+                 ->where('credentials_export', 0)
+                 ->get();
 
     // Check if users exist
     if ($users->isEmpty()) {
@@ -1523,6 +1526,7 @@ public function exportUserCredentials(Request $request)
     $sheet->getColumnDimension('D')->setWidth(40);
 
     $row = 2; // Start from the second row
+    $userIds = []; // Track user IDs for batch update
 
     foreach ($users as $user) {
         // Generate the public URL
@@ -1534,6 +1538,9 @@ public function exportUserCredentials(Request $request)
         $sheet->setCellValue('C' . $row, '12345678'); // Default password
         $sheet->setCellValue('D' . $row, $publicURL);
 
+        // Collect user IDs
+        $userIds[] = $user->id;
+
         $row++;
     }
 
@@ -1543,6 +1550,9 @@ public function exportUserCredentials(Request $request)
     $filePath = storage_path("app/{$fileName}");
 
     $writer->save($filePath);
+
+    // Update credentials_export to 1 for all exported users
+    User::whereIn('id', $userIds)->update(['credentials_export' => 1]);
 
     // Return the file as a download response
     return response()->download($filePath)->deleteFileAfterSend(true);
