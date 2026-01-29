@@ -1268,7 +1268,7 @@ return [
 
     'SMTP.title' => 'Use built in SMTP server',
 
-    'SMTP.description' => 'Uses SMTP server provided by LinkStack. Might not be 100% reliable. Has to be disabled in order to user a custom SMTP server.',
+    'SMTP.description' => 'Uses SMTP server provided by Tapik. Might not be 100% reliable. Has to be disabled in order to user a custom SMTP server.',
 
     'SMTP.description.alt' => '(Save changes with "Apply changes" below)',
 
@@ -1406,7 +1406,7 @@ return [
 
     'JOIN_BETA.title' => 'Join the Beta Program',
 
-    'JOIN_BETA.description' => 'Enables the use of beta versions when updating. Read more about this <a target=\'_blank\' href=\'https://linkstack.org/b\'>here</a>.',
+    'JOIN_BETA.description' => 'Enables the use of beta versions when updating. Read more about this <a target=\'_blank\' href=\'https://Tapik.org/b\'>here</a>.',
 
     'SKIP_UPDATE_BACKUP.title' => 'Skip update backups',
 
@@ -1434,7 +1434,7 @@ return [
 
     'ENABLE_SOCIAL_LOGIN.title' => 'Enable social login',
 
-    'ENABLE_SOCIAL_LOGIN.description' => 'Enables social login. This option requires further setup. Read more about this <a target=\'_blank\' href=\'https://linkstack.org/social-login\'>here</a>.',
+    'ENABLE_SOCIAL_LOGIN.description' => 'Enables social login. This option requires further setup. Read more about this <a target=\'_blank\' href=\'https://Tapik.org/social-login\'>here</a>.',
 
     'USE_THEME_PREVIEW_IFRAME.title' => 'Use iframe as theme preview',
 
@@ -1532,13 +1532,13 @@ return [
 
     # Title Tag
 
-    'LinkStack setup' => 'LinkStack setup',
+    'Tapik setup' => 'Tapik setup',
 
 
 
-    'Setup LinkStack' => 'Setup LinkStack',
+    'Setup Tapik' => 'Setup Tapik',
 
-    'Welcome to the setup for LinkStack!' => 'Welcome to the setup for LinkStack!',
+    'Welcome to the setup for Tapik!' => 'Welcome to the setup for Tapik!',
 
     'This setup will:' => 'This setup will:',
 
@@ -1654,7 +1654,7 @@ return [
 
     # Title Tag
 
-    'Update LinkStack' => 'Update LinkStack',
+    'Update Tapik' => 'Update Tapik',
 
 
 
@@ -1980,13 +1980,13 @@ return [
 
     |--------------------------------------------------------------------------
 
-    | LinkStack (Links) Page
+    | Tapik (Links) Page
 
     |--------------------------------------------------------------------------
 
     |
 
-    | resources/views/linkstack/linkstack.blade.php
+    | resources/views/Tapik/Tapik.blade.php
 
     |
 
@@ -2040,7 +2040,7 @@ return [
 
 
 
-    'Learn more about LinkStack' => 'Learn more about LinkStack',
+    'Learn more about Tapik' => 'Learn more about Tapik',
 
     'Learn more' => 'Learn more',
 
@@ -2092,11 +2092,11 @@ return [
 
     'Help Us Out' => 'Help Us Out',
 
-    'Enjoying Linkstack?' => 'Enjoying Linkstack?',
+    'Enjoying Tapik?' => 'Enjoying Tapik?',
 
-    'Support Linkstack' => 'Support Linkstack',
+    'Support Tapik' => 'Support Tapik',
 
-    'support.msg1' => 'If you\'re enjoying using Linkstack, we would greatly appreciate it if you could take a moment to',
+    'support.msg1' => 'If you\'re enjoying using Tapik, we would greatly appreciate it if you could take a moment to',
 
     'support.msg2' => 'give our project a star on GitHub',
 
@@ -2104,9 +2104,9 @@ return [
 
     'support.msg4' => 'If you\'re able to',
 
-    'support.msg5' => 'make a financial contribution</a>, even a small amount would help us cover the costs of maintaining and improving Linkstack.',
+    'support.msg5' => 'make a financial contribution</a>, even a small amount would help us cover the costs of maintaining and improving Tapik.',
 
-    'support.msg6' => 'Thank you for your support and for being a part of the LinkStack community!',
+    'support.msg6' => 'Thank you for your support and for being a part of the Tapik community!',
 
 
 

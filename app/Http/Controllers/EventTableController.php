@@ -152,7 +152,7 @@ class EventTableController extends Controller
                 'tables' => 'required|array|min:1',
                 'tables.*.table_name' => 'required|string|max:255',
                 'tables.*.chair_count' => 'required|integer|min:1|max:50',
-                'tables.*.manual_assignment' => 'boolean'
+                'tables.*.manual_assignment' => 'nullable|boolean'
             ]);
 
             DB::beginTransaction();
@@ -166,7 +166,7 @@ class EventTableController extends Controller
                     'event_id' => $validated['event_id'],
                     'table_name' => $tableData['table_name'],
                     'chair_count' => $tableData['chair_count'],
-                    'manual_assignment' => $tableData['manual_assignment'] ?? false,
+                    'manual_assignment' => ($tableData['manual_assignment'] ?? 0) == 1,
                     'order' => $order
                 ]);
 

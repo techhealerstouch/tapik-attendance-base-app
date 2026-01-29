@@ -971,7 +971,7 @@ function saveTables() {
         tables.push({
             table_name: tableName,
             chair_count: parseInt(chairCount),
-            manual_assignment: manualAssignment
+            manual_assignment: manualAssignment ? 1 : 0
         });
     });
 

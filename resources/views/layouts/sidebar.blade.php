@@ -150,7 +150,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const observer = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
       if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        console.log('Sidebar classes changed:', sidebar.className);
       }
     });
   });
@@ -164,7 +163,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Also check the width
   setInterval(() => {
     const width = sidebar.offsetWidth;
-    console.log('Sidebar width:', width);
     if (width < 100) {
       sidebar.classList.add('sidebar-mini');
     }
