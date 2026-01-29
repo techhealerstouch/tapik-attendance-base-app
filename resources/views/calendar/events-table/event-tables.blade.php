@@ -542,6 +542,9 @@
                             <button type="button" id="addTableBtn" class="btn btn-primary flex-fill" disabled>
                                 <i class="bi bi-plus-circle"></i> Add Tables
                             </button>
+                            <button type="button" id="exportBtn" class="btn btn-success flex-fill" disabled>
+                                <i class="bi bi-file-earmark-spreadsheet"></i> Export
+                            </button>
                             <button type="button" id="refreshBtn" class="btn btn-secondary flex-fill" disabled>
                                 <i class="bi bi-arrow-clockwise"></i> Refresh
                             </button>
@@ -552,7 +555,7 @@
                     <div id="searchFilterContainer" class="search-filter-container" style="display: none;">
                         <div class="search-wrapper">
                             <i class="bi bi-search search-icon"></i>
-                            <input type="text" id="tableSearch" class="form-control" placeholder="Search tables...">
+                            <input type="text" id="tableSearch" class="form-control" placeholder="Search tables and attendees...">
                         </div>
                         <div class="view-toggle-group">
                             <button class="view-toggle-btn active" data-view="list">
@@ -729,6 +732,7 @@
     
     let currentEventId = null;
     let eventAttendees = [];
+    let assignedUserIds = []; // Track assigned users in the event
     let deleteTableId = null;
     let allTables = [];
     let currentView = 'list';
@@ -769,12 +773,14 @@
                 if (selectedValue && selectedValue !== '') {
                     currentEventId = selectedValue;
                     $('#addTableBtn').prop('disabled', false);
+                    $('#exportBtn').prop('disabled', false);
                     $('#refreshBtn').prop('disabled', false);
                     $('#searchFilterContainer').show();
                     loadTables();
                 } else {
                     currentEventId = null;
                     $('#addTableBtn').prop('disabled', true);
+                    $('#exportBtn').prop('disabled', true);
                     $('#refreshBtn').prop('disabled', true);
                     $('#searchFilterContainer').hide();
                     showEmptyState();
@@ -823,9 +829,9 @@
             }
         });
 
-        // Search functionality
+        // Enhanced Search functionality - filters by table name AND attendee names
         $('#tableSearch').on('input', function() {
-            const searchTerm = $(this).val().toLowerCase();
+            const searchTerm = $(this).val().toLowerCase().trim();
             filterTables(searchTerm);
         });
 
@@ -834,26 +840,54 @@
             currentChairId = $(this).data('chair-id');
             const currentUserId = $(this).data('user-id');
             
-            // Populate modal
+            // Populate modal with available attendees
             $('#assign_chair_id').val(currentChairId);
-            $('#assign_user_select').html('<option value="">-- Unassigned --</option>');
+            populateAssignModal(currentUserId);
             
-            eventAttendees.forEach(function(attendee) {
+            $('#assignChairModal').modal('show');
+        });
+    }
+
+    $('#exportBtn').on('click', function() {
+        if (!currentEventId) {
+            alert('Please select an event first');
+            return;
+        }
+        
+        // Show loading state
+        const $btn = $(this);
+        const originalHtml = $btn.html();
+        $btn.prop('disabled', true).html('<i class="spinner-border spinner-border-sm"></i> Exporting...');
+        
+        // Trigger download
+        window.location.href = '{{ route("event.tables.export") }}?event_id=' + currentEventId;
+        
+        // Reset button after a delay
+        setTimeout(function() {
+            $btn.prop('disabled', false).html(originalHtml);
+        }, 2000);
+    });
+
+    function populateAssignModal(currentUserId) {
+        $('#assign_user_select').html('<option value="">-- Unassigned --</option>');
+        
+        eventAttendees.forEach(function(attendee) {
+            // Only show attendees who are NOT already assigned, OR the currently assigned user
+            if (!assignedUserIds.includes(attendee.id) || attendee.id === currentUserId) {
                 const selected = currentUserId === attendee.id ? 'selected' : '';
                 $('#assign_user_select').append(
                     `<option value="${attendee.id}" ${selected}>${escapeHtml(attendee.name)}</option>`
                 );
-            });
+            }
+        });
 
-            $('#assign_user_select').select2({
-                theme: 'bootstrap-5',
-                dropdownParent: $('#assignChairModal'),
-                width: '100%',
-                placeholder: '-- Unassigned --',
-                allowClear: true
-            });
-
-            $('#assignChairModal').modal('show');
+        // Reinitialize Select2
+        $('#assign_user_select').select2({
+            theme: 'bootstrap-5',
+            dropdownParent: $('#assignChairModal'),
+            width: '100%',
+            placeholder: '-- Unassigned --',
+            allowClear: true
         });
     }
 
@@ -872,49 +906,84 @@
         }
 
         $('.table-card-wrapper').each(function() {
-            const tableName = $(this).find('.table-card-title div:first').text().toLowerCase();
-            if (tableName.includes(searchTerm)) {
-                $(this).show();
+            const $wrapper = $(this);
+            const $tableCard = $wrapper.find('.table-card');
+            
+            // Get table name - extract only the text from the first div, excluding badges
+            let tableName = '';
+            const $titleDiv = $tableCard.find('.table-card-title > div:last > div:first');
+            
+            // Clone the element and remove any badges before getting text
+            const $clonedTitle = $titleDiv.clone();
+            $clonedTitle.find('.badge').remove();
+            tableName = $clonedTitle.text().trim().toLowerCase();
+            
+            // Get all attendee names from this table
+            const attendeeNames = [];
+            
+            // For list view - get from select options
+            $tableCard.find('.chair-select option:selected').each(function() {
+                const name = $(this).text().toLowerCase().trim();
+                if (name && name !== '-- unassigned --') {
+                    attendeeNames.push(name);
+                }
+            });
+            
+            // For diagram view - get from chair user names
+            $tableCard.find('.diagram-chair .chair-user-name').each(function() {
+                const name = $(this).text().toLowerCase().trim();
+                if (name && name !== 'empty') {
+                    attendeeNames.push(name);
+                }
+            });
+            
+            // Combine table name and all attendee names into one searchable string
+            const allNames = attendeeNames.join(' ');
+            const combinedSearchText = `${tableName} ${allNames}`.toLowerCase();
+            
+            // Check if search term is found in the combined text
+            if (combinedSearchText.includes(searchTerm)) {
+                $wrapper.show();
             } else {
-                $(this).hide();
+                $wrapper.hide();
             }
         });
     }
 
-function addTableInput() {
-    const newRow = `
-        <div class="table-input-row mb-3">
-            <div class="row">
-                <div class="col-md-6">
-                    <label class="form-label">Table Name *</label>
-                    <input type="text" class="form-control table-name" placeholder="e.g., Table 2" required>
+    function addTableInput() {
+        const newRow = `
+            <div class="table-input-row mb-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Table Name *</label>
+                        <input type="text" class="form-control table-name" placeholder="e.g., Table 2" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Number of Seats *</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control chair-count" placeholder="e.g., 6" min="1" max="50" required>
+                            <button type="button" class="btn btn-danger remove-table-btn">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Number of Seats *</label>
-                    <div class="input-group">
-                        <input type="number" class="form-control chair-count" placeholder="e.g., 6" min="1" max="50" required>
-                        <button type="button" class="btn btn-danger remove-table-btn">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                <div class="row mt-2">
+                    <div class="col-md-12">
+                        <div class="form-check">
+                            <input class="form-check-input manual-assignment-check" type="checkbox" value="1">
+                            <label class="form-check-label">
+                                <i class="bi bi-hand-index"></i> Manual Assignment
+                                <small class="text-muted d-block">Check this if you want to manually assign seats</small>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="row mt-2">
-                <div class="col-md-12">
-                    <div class="form-check">
-                        <input class="form-check-input manual-assignment-check" type="checkbox" value="1">
-                        <label class="form-check-label">
-                            <i class="bi bi-hand-index"></i> Manual Assignment
-                            <small class="text-muted d-block">Check this if you want to manually assign seats</small>
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    $('#tablesInputContainer').append(newRow);
-    updateRemoveButtons();
-}
+        `;
+        $('#tablesInputContainer').append(newRow);
+        updateRemoveButtons();
+    }
 
     function updateRemoveButtons() {
         const rows = $('.table-input-row');
@@ -954,51 +1023,51 @@ function addTableInput() {
         `);
     }
 
-function saveTables() {
-    const tables = [];
-    let isValid = true;
+    function saveTables() {
+        const tables = [];
+        let isValid = true;
 
-    $('.table-input-row').each(function() {
-        const tableName = $(this).find('.table-name').val().trim();
-        const chairCount = $(this).find('.chair-count').val();
-        const manualAssignment = $(this).find('.manual-assignment-check').is(':checked');
+        $('.table-input-row').each(function() {
+            const tableName = $(this).find('.table-name').val().trim();
+            const chairCount = $(this).find('.chair-count').val();
+            const manualAssignment = $(this).find('.manual-assignment-check').is(':checked');
 
-        if (!tableName || !chairCount || chairCount < 1) {
-            isValid = false;
-            return false;
-        }
+            if (!tableName || !chairCount || chairCount < 1) {
+                isValid = false;
+                return false;
+            }
 
-        tables.push({
-            table_name: tableName,
-            chair_count: parseInt(chairCount),
-            manual_assignment: manualAssignment ? 1 : 0
+            tables.push({
+                table_name: tableName,
+                chair_count: parseInt(chairCount),
+                manual_assignment: manualAssignment ? 1 : 0
+            });
         });
-    });
 
-    if (!isValid) {
-        alert('Please fill in all fields correctly');
-        return;
-    }
-
-    $.ajax({
-        url: '{{ route("event.tables.store") }}',
-        method: 'POST',
-        data: {
-            event_id: currentEventId,
-            tables: tables,
-            _token: '{{ csrf_token() }}'
-        },
-        success: function(response) {
-            $('#addTablesModal').modal('hide');
-            loadTables();
-            showAlert('success', response.message || 'Tables created successfully');
-        },
-        error: function(xhr) {
-            const message = xhr.responseJSON?.message || 'Error creating tables';
-            showAlert('danger', message);
+        if (!isValid) {
+            alert('Please fill in all fields correctly');
+            return;
         }
-    });
-}
+
+        $.ajax({
+            url: '{{ route("event.tables.store") }}',
+            method: 'POST',
+            data: {
+                event_id: currentEventId,
+                tables: tables,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                $('#addTablesModal').modal('hide');
+                loadTables();
+                showAlert('success', response.message || 'Tables created successfully');
+            },
+            error: function(xhr) {
+                const message = xhr.responseJSON?.message || 'Error creating tables';
+                showAlert('danger', message);
+            }
+        });
+    }
 
     function loadTables() {
         if (!currentEventId) return;
@@ -1017,10 +1086,12 @@ function saveTables() {
             data: { event_id: currentEventId },
             success: function(response) {
                 eventAttendees = response.attendees || [];
+                assignedUserIds = response.assignedUserIds || [];
                 loadTablesData();
             },
             error: function(xhr) {
                 eventAttendees = [];
+                assignedUserIds = [];
                 loadTablesData();
             }
         });
@@ -1068,89 +1139,93 @@ function saveTables() {
     }
 
     function displayListView(tables) {
-    let html = '<div class="list-view active tables-view-container">';
-    
-    tables.forEach(function(table) {
-        const assignedCount = table.chairs.filter(c => c.user_id).length;
-        const availableCount = table.chair_count - assignedCount;
-        const isManual = table.manual_assignment;
+        let html = '<div class="list-view active tables-view-container">';
         
-        html += `
-            <div class="table-card-wrapper">
-                <div class="table-card">
-                    <div class="table-card-header">
-                        <div class="table-card-title">
-                            <div class="table-icon">
-                                <i class="bi bi-table"></i>
-                            </div>
-                            <div>
-                                <div>
-                                    ${escapeHtml(table.table_name)}
-                                    ${isManual ? '<span class="badge bg-warning ms-2"><i class="bi bi-hand-index"></i> Manual</span>' : '<span class="badge bg-success ms-2"><i class="bi bi-lightning"></i> Auto</span>'}
-                                </div>
-                                <small class="text-muted">${table.chair_count} seats</small>
-                            </div>
-                        </div>
-                        <div class="table-actions">
-                            <button class="btn btn-sm btn-warning edit-table-btn" data-table-id="${table.id}" 
-                                data-table-name="${escapeHtml(table.table_name)}" 
-                                data-chair-count="${table.chair_count}"
-                                data-manual-assignment="${isManual ? 1 : 0}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger delete-table-btn" data-table-id="${table.id}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <span class="stats-badge assigned">
-                            <i class="bi bi-person-check"></i> ${assignedCount} Assigned
-                        </span>
-                        <span class="stats-badge available">
-                            <i class="bi bi-person-plus"></i> ${availableCount} Available
-                        </span>
-                    </div>
-                    <div class="chair-grid">
-        `;
-
-        table.chairs.forEach(function(chair) {
-            const selectId = `chair_${chair.id}`;
-            html += `
-                <div class="chair-item">
-                    <div class="chair-number">${chair.chair_number}</div>
-                    <div class="chair-select-wrapper">
-                        <select class="form-select form-select-sm chair-select" 
-                            data-chair-id="${chair.id}" 
-                            id="${selectId}">
-                            <option value="">-- Unassigned --</option>
-            `;
+        tables.forEach(function(table) {
+            const assignedCount = table.chairs.filter(c => c.user_id).length;
+            const availableCount = table.chair_count - assignedCount;
+            const isManual = table.manual_assignment;
             
-            eventAttendees.forEach(function(attendee) {
-                const selected = chair.user_id === attendee.id ? 'selected' : '';
-                html += `<option value="${attendee.id}" ${selected}>${escapeHtml(attendee.name)}</option>`;
+            html += `
+                <div class="table-card-wrapper">
+                    <div class="table-card">
+                        <div class="table-card-header">
+                            <div class="table-card-title">
+                                <div class="table-icon">
+                                    <i class="bi bi-table"></i>
+                                </div>
+                                <div>
+                                    <div>
+                                        ${escapeHtml(table.table_name)}
+                                        ${isManual ? '<span class="badge bg-warning ms-2"><i class="bi bi-hand-index"></i> Manual</span>' : '<span class="badge bg-success ms-2"><i class="bi bi-lightning"></i> Auto</span>'}
+                                    </div>
+                                    <small class="text-muted">${table.chair_count} seats</small>
+                                </div>
+                            </div>
+                            <div class="table-actions">
+                                <button class="btn btn-sm btn-warning edit-table-btn" data-table-id="${table.id}" 
+                                    data-table-name="${escapeHtml(table.table_name)}" 
+                                    data-chair-count="${table.chair_count}"
+                                    data-manual-assignment="${isManual ? 1 : 0}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger delete-table-btn" data-table-id="${table.id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <span class="stats-badge assigned">
+                                <i class="bi bi-person-check"></i> ${assignedCount} Assigned
+                            </span>
+                            <span class="stats-badge available">
+                                <i class="bi bi-person-plus"></i> ${availableCount} Available
+                            </span>
+                        </div>
+                        <div class="chair-grid">
+            `;
+
+            table.chairs.forEach(function(chair) {
+                const selectId = `chair_${chair.id}`;
+                html += `
+                    <div class="chair-item">
+                        <div class="chair-number">${chair.chair_number}</div>
+                        <div class="chair-select-wrapper">
+                            <select class="form-select form-select-sm chair-select" 
+                                data-chair-id="${chair.id}" 
+                                data-current-user="${chair.user_id || ''}"
+                                id="${selectId}">
+                                <option value="">-- Unassigned --</option>
+                `;
+                
+                // Only show unassigned users OR the current user assigned to this chair
+                eventAttendees.forEach(function(attendee) {
+                    if (!assignedUserIds.includes(attendee.id) || attendee.id === chair.user_id) {
+                        const selected = chair.user_id === attendee.id ? 'selected' : '';
+                        html += `<option value="${attendee.id}" ${selected}>${escapeHtml(attendee.name)}</option>`;
+                    }
+                });
+
+                html += `
+                            </select>
+                        </div>
+                    </div>
+                `;
             });
 
             html += `
-                        </select>
+                        </div>
                     </div>
                 </div>
             `;
         });
 
-        html += `
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    html += '</div>';
-    
-    $('#tablesContainer').html(html);
-    initializeChairSelects();
-    setupTableActions();
-}
+        html += '</div>';
+        
+        $('#tablesContainer').html(html);
+        initializeChairSelects();
+        setupTableActions();
+    }
 
     function displayDiagramView(tables) {
         let html = '<div class="diagram-view active tables-view-container">';
@@ -1266,24 +1341,24 @@ function saveTables() {
     }
 
     function setupTableActions() {
-    $('.edit-table-btn').on('click', function() {
-        const tableId = $(this).data('table-id');
-        const tableName = $(this).data('table-name');
-        const chairCount = $(this).data('chair-count');
-        const manualAssignment = $(this).data('manual-assignment') == 1;
-        
-        $('#edit_table_id').val(tableId);
-        $('#edit_table_name').val(tableName);
-        $('#edit_chair_count').val(chairCount);
-        $('#edit_manual_assignment').prop('checked', manualAssignment);
-        $('#editTableModal').modal('show');
-    });
+        $('.edit-table-btn').on('click', function() {
+            const tableId = $(this).data('table-id');
+            const tableName = $(this).data('table-name');
+            const chairCount = $(this).data('chair-count');
+            const manualAssignment = $(this).data('manual-assignment') == 1;
+            
+            $('#edit_table_id').val(tableId);
+            $('#edit_table_name').val(tableName);
+            $('#edit_chair_count').val(chairCount);
+            $('#edit_manual_assignment').prop('checked', manualAssignment);
+            $('#editTableModal').modal('show');
+        });
 
-    $('.delete-table-btn').on('click', function() {
-        deleteTableId = $(this).data('table-id');
-        $('#deleteTableModal').modal('show');
-    });
-}
+        $('.delete-table-btn').on('click', function() {
+            deleteTableId = $(this).data('table-id');
+            $('#deleteTableModal').modal('show');
+        });
+    }
 
     function assignChair(chairId, userId) {
         $.ajax({
@@ -1312,37 +1387,36 @@ function saveTables() {
     }
 
     function updateTable() {
-    const tableId = $('#edit_table_id').val();
-    const tableName = $('#edit_table_name').val().trim();
-    const chairCount = $('#edit_chair_count').val();
-    const manualAssignment = $('#edit_manual_assignment').is(':checked'); // This returns true/false
+        const tableId = $('#edit_table_id').val();
+        const tableName = $('#edit_table_name').val().trim();
+        const chairCount = $('#edit_chair_count').val();
+        const manualAssignment = $('#edit_manual_assignment').is(':checked');
 
-    if (!tableName || !chairCount || chairCount < 1) {
-        alert('Please fill in all fields correctly');
-        return;
-    }
-
-    $.ajax({
-        url: `/event-tables/${tableId}`,
-        method: 'PUT',
-        data: {
-            table_name: tableName,
-            chair_count: parseInt(chairCount),
-            manual_assignment: manualAssignment ? 1 : 0, // Convert to 1 or 0 for Laravel
-            _token: '{{ csrf_token() }}'
-        },
-        success: function(response) {
-            $('#editTableModal').modal('hide');
-            loadTables();
-            showAlert('success', response.message || 'Table updated successfully');
-        },
-        error: function(xhr) {
-            const message = xhr.responseJSON?.message || 'Error updating table';
-            showAlert('danger', message);
+        if (!tableName || !chairCount || chairCount < 1) {
+            alert('Please fill in all fields correctly');
+            return;
         }
-    });
-}
 
+        $.ajax({
+            url: `/event-tables/${tableId}`,
+            method: 'PUT',
+            data: {
+                table_name: tableName,
+                chair_count: parseInt(chairCount),
+                manual_assignment: manualAssignment ? 1 : 0,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                $('#editTableModal').modal('hide');
+                loadTables();
+                showAlert('success', response.message || 'Table updated successfully');
+            },
+            error: function(xhr) {
+                const message = xhr.responseJSON?.message || 'Error updating table';
+                showAlert('danger', message);
+            }
+        });
+    }
 
     function confirmDeleteTable() {
         if (!deleteTableId) return;

@@ -305,7 +305,7 @@
           <span class="switch-x-text"></span>
           <span class="switch-x-toggletext">
             <span class="switch-x-unchecked">
-              <span class="switch-x-hiddenlabel">Unchecked: </span>NFC/RFID Scan
+              <span class="switch-x-hiddenlabel">Unchecked: </span>NFC Scan
             </span>
             <span class="switch-x-checked">
               <span class="switch-x-hiddenlabel">Checked: </span>QR Code Scan
@@ -508,6 +508,16 @@ function cancelCustomRep() {
     }
     document.getElementById('customRepInput').value = '';
     currentScanData = null;
+    
+    // Clear the loading/processing state
+    const rfidStatus = document.getElementById('rfid-status');
+    if (rfidStatus) {
+        rfidStatus.innerHTML = '';
+    }
+    const qrResult = document.getElementById('result');
+    if (qrResult) {
+        qrResult.innerHTML = '';
+    }
     
     const rfidInput = document.getElementById('rfidInput');
     if (rfidInput && document.getElementById('rfid').style.display !== 'none') {

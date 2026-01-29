@@ -9,6 +9,8 @@ use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class EventTableController extends Controller
 {
@@ -64,6 +66,7 @@ class EventTableController extends Controller
                 ], 400);
             }
 
+            // Get all attendees for the event
             $attendees = Attendance::where('event_id', $eventId)
                 ->with('user:id,name,email')
                 ->get()
@@ -80,9 +83,19 @@ class EventTableController extends Controller
                 })
                 ->values();
 
+            // Get all assigned user IDs in this event
+            $assignedUserIds = EventTableChair::whereHas('eventTable', function ($query) use ($eventId) {
+                $query->where('event_id', $eventId);
+            })
+                ->whereNotNull('user_id')
+                ->pluck('user_id')
+                ->unique()
+                ->toArray();
+
             return response()->json([
                 'success' => true,
-                'attendees' => $attendees
+                'attendees' => $attendees,
+                'assignedUserIds' => $assignedUserIds
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching attendees: ' . $e->getMessage());
@@ -102,6 +115,7 @@ class EventTableController extends Controller
             ]);
 
             $chair = EventTableChair::find($validated['chair_id']);
+            $eventId = $chair->eventTable->event_id;
             
             // If user_id is null, we're unassigning the chair
             if ($validated['user_id'] === null) {
@@ -115,15 +129,17 @@ class EventTableController extends Controller
             }
 
             // Check if user is already assigned to another chair in the same event
-            $eventId = $chair->eventTable->event_id;
             $existingAssignment = EventTableChair::whereHas('eventTable', function ($query) use ($eventId) {
                 $query->where('event_id', $eventId);
-            })->where('user_id', $validated['user_id'])->first();
+            })
+                ->where('user_id', $validated['user_id'])
+                ->where('id', '!=', $chair->id)
+                ->first();
 
-            if ($existingAssignment && $existingAssignment->id != $chair->id) {
+            if ($existingAssignment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'User is already assigned to another chair in this event'
+                    'message' => 'This attendee is already assigned to another seat in this event. Please unassign them first.'
                 ], 422);
             }
 
@@ -274,6 +290,162 @@ class EventTableController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error updating table: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function exportTables(Request $request)
+    {
+        try {
+            $eventId = $request->input('event_id');
+
+            if (!$eventId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Event ID is required'
+                ], 400);
+            }
+
+            $event = Event::findOrFail($eventId);
+            
+            $tables = EventTable::where('event_id', $eventId)
+                ->with(['chairs.user'])
+                ->orderBy('order')
+                ->orderBy('table_name')
+                ->get();
+
+            if ($tables->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tables found for this event'
+                ], 404);
+            }
+
+            // Create new Spreadsheet
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // Set document properties
+            $spreadsheet->getProperties()
+                ->setCreator("Event Management System")
+                ->setTitle("Table Assignments - " . $event->title)
+                ->setSubject("Table Assignments");
+
+            $currentRow = 1;
+
+            // Process each table
+            foreach ($tables as $table) {
+                // Table Header (merged cells)
+                $sheet->mergeCells("A{$currentRow}:B{$currentRow}");
+                $sheet->setCellValue("A{$currentRow}", $table->table_name);
+                
+                // Style the table header
+                $sheet->getStyle("A{$currentRow}:B{$currentRow}")->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                        'size' => 14,
+                        'color' => ['rgb' => 'FFFFFF']
+                    ],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => '4F46E5']
+                    ],
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                    ]
+                ]);
+                $sheet->getRowDimension($currentRow)->setRowHeight(25);
+                
+                $currentRow++;
+
+                // Column Headers
+                $sheet->setCellValue("A{$currentRow}", 'Name');
+                $sheet->setCellValue("B{$currentRow}", 'Status');
+                
+                // Style column headers
+                $sheet->getStyle("A{$currentRow}:B{$currentRow}")->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                        'color' => ['rgb' => 'FFFFFF']
+                    ],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => '6366F1']
+                    ],
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+                    ]
+                ]);
+                
+                $currentRow++;
+
+                // Get assigned chairs only
+                $assignedChairs = $table->chairs->filter(function($chair) {
+                    return $chair->user_id !== null;
+                })->sortBy('chair_number');
+
+                if ($assignedChairs->count() > 0) {
+                    foreach ($assignedChairs as $chair) {
+                        $userName = $chair->user ? $chair->user->name : 'Unknown';
+                        
+                        $sheet->setCellValue("A{$currentRow}", $userName);
+                        $sheet->setCellValue("B{$currentRow}", ''); // Leave status blank
+                        
+                        // Style data rows with alternating colors
+                        $fillColor = ($currentRow % 2 == 0) ? 'F8FAFC' : 'FFFFFF';
+                        $sheet->getStyle("A{$currentRow}:B{$currentRow}")->applyFromArray([
+                            'fill' => [
+                                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                                'startColor' => ['rgb' => $fillColor]
+                            ],
+                            'borders' => [
+                                'allBorders' => [
+                                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                                    'color' => ['rgb' => 'E2E8F0']
+                                ]
+                            ]
+                        ]);
+                        
+                        $currentRow++;
+                    }
+                } else {
+                    // No assigned chairs
+                    $sheet->setCellValue("A{$currentRow}", 'No assignments');
+                    $sheet->mergeCells("A{$currentRow}:B{$currentRow}");
+                    $sheet->getStyle("A{$currentRow}")->applyFromArray([
+                        'font' => ['italic' => true, 'color' => ['rgb' => '64748B']],
+                        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+                    ]);
+                    $currentRow++;
+                }
+
+                // Add spacing between tables
+                $currentRow += 2;
+            }
+
+            // Auto-size columns
+            $sheet->getColumnDimension('A')->setWidth(30);
+            $sheet->getColumnDimension('B')->setWidth(20);
+
+            // Generate filename
+            $fileName = 'table_assignments_' . str_replace(' ', '_', $event->title) . '_' . date('Y-m-d_His') . '.xlsx';
+            
+            // Save to temporary file
+            $tempFile = tempnam(sys_get_temp_dir(), 'export_');
+            $writer = new Xlsx($spreadsheet);
+            $writer->save($tempFile);
+
+            // Return file as download
+            return response()->download($tempFile, $fileName, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+
+        } catch (\Exception $e) {
+            Log::error('Error exporting tables: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error exporting tables: ' . $e->getMessage()
             ], 500);
         }
     }

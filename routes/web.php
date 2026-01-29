@@ -345,6 +345,7 @@ Route::group([
     Route::get('event-tables/fetch', [EventTableController::class, 'fetch'])->name('event.tables.fetch');
     Route::get('event-tables/attendees', [EventTableController::class, 'getEventAttendees'])->name('event.tables.attendees');
     Route::post('event-tables/store', [EventTableController::class, 'storeTables'])->name('event.tables.store');
+    Route::get('event-tables/export', [EventTableController::class, 'exportTables'])->name('event.tables.export');
     Route::post('event-tables/assign-chair', [EventTableController::class, 'assignChair'])->name('event.tables.assign');
     Route::put('event-tables/{id}', [EventTableController::class, 'updateTable'])->name('event.tables.update');
     Route::delete('event-tables/{id}', [EventTableController::class, 'deleteTable'])->name('event.tables.delete');
