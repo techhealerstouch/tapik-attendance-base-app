@@ -229,6 +229,11 @@ class AttendanceController extends Controller
             // Check if it's a URL
             if (filter_var($identifier, FILTER_VALIDATE_URL)) {
                 $userCode = basename($identifier);
+
+                    if (strpos($userCode, '@') === 0) {
+                        $userCode = substr($userCode, 1);
+                    }
+
                 $user = User::where('activate_code', $userCode)
                     ->orWhere('id', $userCode)
                     ->first();
