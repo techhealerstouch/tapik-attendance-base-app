@@ -434,6 +434,16 @@ document.getElementById('rfidInput')?.addEventListener('keypress', function(e) {
     }
 });
 
+// Handle Enter key press in custom representative input
+function handleCustomRepEnter(event) {
+    if (event.key === 'Enter' || event.keyCode === 13) {
+        event.preventDefault();
+        event.stopPropagation();
+        submitCustomRep();
+        return false;
+    }
+}
+
 function handleScan(identifier, scanType) {
     showLoading(scanType);
 
@@ -497,6 +507,10 @@ function confirmRepresentative(confirmed) {
         setTimeout(() => {
             const customModal = new bootstrap.Modal(document.getElementById('customRepModal'));
             customModal.show();
+            // Focus on the input field when modal opens
+            setTimeout(() => {
+                document.getElementById('customRepInput').focus();
+            }, 300);
         }, 300);
     }
 }
@@ -729,5 +743,18 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Apply the saved state
     toggleDiv();
+    
+    // Add Enter key listener to custom rep input
+    const customRepInput = document.getElementById('customRepInput');
+    if (customRepInput) {
+        customRepInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                e.stopPropagation();
+                submitCustomRep();
+                return false;
+            }
+        });
+    }
 });
 </script>

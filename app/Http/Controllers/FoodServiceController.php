@@ -162,6 +162,10 @@ class FoodServiceController extends Controller
             Log::info($userId);
             Log::info($request->identifier);
 
+                                if (strpos($userId, '@') === 0) {
+                        $userId = substr($userId, 1);
+                    }
+
             // Find the user using the extracted user ID
             $user = User::where('activate_code', $userId)
                 ->orWhere('id', $userId)

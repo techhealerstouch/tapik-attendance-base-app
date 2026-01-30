@@ -333,18 +333,6 @@
 
 
 
-                        <div class="lead">
-
-                            @if ($message->home_message == 'default')
-                                {!! __('messages.HOME.MESSAGE') !!}
-                            @else
-                                {!! $message->home_message !!}
-                            @endif
-
-                        </div>
-
-
-
                         <div class="d-flex justify-content-center align-items-center pt-4">
 
                             @if (Route::has('login'))

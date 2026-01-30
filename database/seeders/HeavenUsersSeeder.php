@@ -16,7 +16,7 @@ class HeavenUsersSeeder extends Seeder
                 'name' => 'Dummy User' . $i,
                 'email' => 'dummyuser' . $i . '@tapik.com',
                 'password' => Hash::make('12345678'), // default password
-                'activate_code' => 'cd' . $i,
+                'activate_code' => 'cde' . $i,
                 'activate_status' => 'activated',
                 'role' => 'user',
                 'qr_code_status' => 1,
